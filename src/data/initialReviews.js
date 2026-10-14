@@ -1,0 +1,87 @@
+// Seed reviews for top courses
+export const initialReviews = [
+  {
+    id: 'rev-aws-1',
+    productId: '00796cff-0a93-40fe-a22a-44433794233d',
+    userId: 'user-student-1',
+    userName: 'Alex Kumar',
+    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=face',
+    rating: 5,
+    title: 'Cleared AWS SAA-C03 with 865/1000! Realistic scenarios.',
+    comment: 'The scenario-based multi-select questions are virtually identical in style to the real AWS exam. What sets this apart is the detailed breakdown of why the distractors are wrong. Cleared on my first attempt after taking all 6 mock tests!',
+    date: '2026-10-10',
+    isVerifiedPurchase: true,
+    helpfulCount: 38,
+    helpfulUsers: []
+  },
+  {
+    id: 'rev-aws-2',
+    productId: '00796cff-0a93-40fe-a22a-44433794233d',
+    userId: 'user-student-2',
+    userName: 'Priya Sharma',
+    userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face',
+    rating: 5,
+    title: 'Best practice tests on the market. Yogesh Dhiman is top notch.',
+    comment: 'I bought Yogesh’s courses on Udemy and having these dedicated 6 practice tests on ITPracticeTests with the timed countdown mode helped me master time management. Highly recommended for cloud architects.',
+    date: '2026-10-08',
+    isVerifiedPurchase: true,
+    helpfulCount: 22,
+    helpfulUsers: []
+  },
+  {
+    id: 'rev-aws-3',
+    productId: '00796cff-0a93-40fe-a22a-44433794233d',
+    userId: 'user-ext-3',
+    userName: 'David Miller',
+    userAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&h=120&fit=crop&crop=face',
+    rating: 4,
+    title: 'Very thorough questions, especially on VPC & DynamoDB scaling',
+    comment: 'Challenging questions that forced me to read the official whitepapers carefully. Test 3 and Test 5 were especially great benchmarks for exam readiness.',
+    date: '2026-09-28',
+    isVerifiedPurchase: true,
+    helpfulCount: 14,
+    helpfulUsers: []
+  },
+  {
+    id: 'rev-sec-1',
+    productId: '15f206c0-8577-431c-83d5-f411f9a763e0',
+    userId: 'user-ext-4',
+    userName: 'Marcus Vance',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face',
+    rating: 5,
+    title: 'SecurityX CAS-005 passed! In-depth cryptographic & Zero Trust questions',
+    comment: 'The CAS-005 exam is notorious for confusing terminology, but this question bank clearly maps every objective. The explanations include direct links to NIST and ISO frameworks.',
+    date: '2026-10-12',
+    isVerifiedPurchase: true,
+    helpfulCount: 19,
+    helpfulUsers: []
+  },
+  {
+    id: 'rev-dp600-1',
+    productId: '0c3d74a7-fba1-4b13-b309-b3ad518d5ae7',
+    userId: 'user-ext-5',
+    userName: 'Sneha Patel',
+    userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&crop=face',
+    rating: 5,
+    title: 'Microsoft Fabric DP-600 exam ready in 2 weeks',
+    comment: 'Covers Lakehouses, Direct Lake storage mode, DAX optimization, and PySpark data pipelines. Scoring 85%+ on these mock exams gave me full confidence for exam day.',
+    date: '2026-10-11',
+    isVerifiedPurchase: true,
+    helpfulCount: 27,
+    helpfulUsers: []
+  },
+  {
+    id: 'rev-free-1',
+    productId: 'free-az900-diagnostic',
+    userId: 'user-student-1',
+    userName: 'Alex Kumar',
+    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=face',
+    rating: 5,
+    title: 'Superb free test to benchmark your cloud fundamentals',
+    comment: 'Completely free with zero ads. Great questions on Azure SLA calculations, hybrid cloud identity, and Azure Policy governance.',
+    date: '2026-10-05',
+    isVerifiedPurchase: true,
+    helpfulCount: 45,
+    helpfulUsers: []
+  }
+];
