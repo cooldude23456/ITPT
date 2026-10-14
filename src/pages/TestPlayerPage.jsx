@@ -18,11 +18,66 @@ import {
   Pause,
   Play,
   ShieldCheck,
-  Award
+  Award,
+  Lock,
+  ShoppingCart,
+  ShieldAlert,
+  ArrowRight
 } from 'lucide-react';
 
 export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, onBack }) {
-  const { saveTestAttempt, getProductQuestions, getCoursePracticeTests } = useApp();
+  const {
+    saveTestAttempt,
+    getProductQuestions,
+    getCoursePracticeTests,
+    currentUser,
+    verifyCourseAccess,
+    formatPrice,
+    addToCart,
+    openLoginModal
+  } = useApp();
+
+  const isFreeCourse = Boolean(
+    product.isFree ||
+    product.priceINR === 0 ||
+    product.priceUSD === 0 ||
+    product.id === 'free-az900-diagnostic' ||
+    product.id === '943fcd85-67de-4414-82ef-49fb24be3f74' ||
+    product.id === '6804711e-87c7-4bae-a41a-6d80ba4a8f34'
+  );
+
+  const [accessState, setAccessState] = useState(() => (isFreeCourse ? 'authorized' : 'checking'));
+  const [accessErrorMsg, setAccessErrorMsg] = useState('');
+
+  // Zero-Trust Server Access Verification
+  useEffect(() => {
+    let isMounted = true;
+    if (isFreeCourse) {
+      setAccessState('authorized');
+      return;
+    }
+
+    setAccessState('checking');
+    if (verifyCourseAccess) {
+      verifyCourseAccess(product.id).then(res => {
+        if (!isMounted) return;
+        if (res && res.hasAccess) {
+          setAccessState('authorized');
+        } else {
+          setAccessState('denied');
+          setAccessErrorMsg(res?.message || 'Verified payment required to access this exam simulator.');
+        }
+      }).catch(err => {
+        if (!isMounted) return;
+        setAccessState('denied');
+        setAccessErrorMsg('Could not verify course authorization with security server.');
+      });
+    } else {
+      setAccessState('denied');
+    }
+
+    return () => { isMounted = false; };
+  }, [product.id, currentUser?.email, isFreeCourse]);
 
   const tNum = Math.max(1, Math.min(6, parseInt(testNumber) || 1));
 
@@ -41,10 +96,10 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
     passingScore: product.passingScore || 70
   };
 
-  // Load questions for this specific practice test (capped at max 250 questions)
-  const rawQuestions = getProductQuestions
-    ? getProductQuestions(product.id, product.title, tNum)
-    : getQuestionsForProduct(product.id, product.title, tNum);
+  // Load questions for this specific practice test (ONLY after authorization)
+  const rawQuestions = accessState === 'authorized'
+    ? (getProductQuestions ? getProductQuestions(product.id, product.title, tNum) : getQuestionsForProduct(product.id, product.title, tNum))
+    : [];
 
   // Enforce maximum 250 questions per practice test (Udemy standard)
   const questions = (rawQuestions && rawQuestions.length > 0 ? rawQuestions : [
@@ -233,6 +288,122 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
   const answeredCount = Object.keys(selectedAnswers).filter(k => selectedAnswers[k]?.length > 0).length;
   const unansweredCount = questions.length - answeredCount;
   const flaggedCount = Object.values(flaggedQuestions).filter(Boolean).length;
+
+  // -------------------------------------------------------------
+  // ZERO-TRUST ACCESS CONTROL: CHECKING STATE
+  // -------------------------------------------------------------
+  if (accessState === 'checking') {
+    return (
+      <div className="min-h-screen bg-[#f7f9fa] py-16 px-4 font-sans flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-udemy-border shadow-card p-8 text-center space-y-4 animate-fadeIn">
+          <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-700 mx-auto flex items-center justify-center animate-pulse">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-extrabold text-udemy-dark">
+            Verifying Course Authorization
+          </h2>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Cryptographically authenticating lifetime enrollment license for <strong>{product.title}</strong> with ITPracticeTests security server...
+          </p>
+          <div className="flex items-center justify-center space-x-2 text-xs font-semibold text-purple-700 pt-2">
+            <div className="w-2 h-2 rounded-full bg-purple-600 animate-bounce" />
+            <div className="w-2 h-2 rounded-full bg-purple-600 animate-bounce [animation-delay:0.2s]" />
+            <div className="w-2 h-2 rounded-full bg-purple-600 animate-bounce [animation-delay:0.4s]" />
+            <span>Validating TLS 1.3 Credentials</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // ZERO-TRUST ACCESS CONTROL: ACCESS DENIED / PAYMENT REQUIRED
+  // -------------------------------------------------------------
+  if (accessState === 'denied') {
+    return (
+      <div className="min-h-screen bg-[#f7f9fa] py-16 px-4 font-sans flex items-center justify-center">
+        <div className="max-w-lg w-full bg-white rounded-2xl border border-rose-200 shadow-card p-8 text-center space-y-6 animate-fadeIn">
+          <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+              Access Restricted • Verified Payment Required
+            </span>
+            <h1 className="text-2xl font-extrabold text-udemy-dark pt-1">
+              Enrollment Required
+            </h1>
+            <p className="text-xs text-gray-600 max-w-sm mx-auto leading-relaxed">
+              <strong>{product.title}</strong> is a premium IT certification exam simulator. Full access to questions, domain scorecards, and timed mock exams requires an active verified enrollment.
+            </p>
+          </div>
+
+          {/* Pricing & Guarantee Box */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left text-xs space-y-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Certification Course:</span>
+              <span className="font-bold text-slate-800">{product.vendor} {product.category}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 font-medium">Course Fee:</span>
+              <span className="text-lg font-black text-purple-700">
+                {formatPrice(product.priceINR, product.priceUSD)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-t border-slate-200 pt-2 text-[11px] text-emerald-800">
+              <span className="flex items-center space-x-1 font-bold">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Lifetime Access + Free Updates</span>
+              </span>
+              <span className="font-bold">6 Practice Tests Included</span>
+            </div>
+          </div>
+
+          {/* User Account Context */}
+          {currentUser ? (
+            <p className="text-[11px] text-gray-500">
+              Signed in as <strong className="text-slate-800">{currentUser.email}</strong>. If you used a different email to purchase this exam, please switch accounts.
+            </p>
+          ) : (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
+              <span>Already purchased with another account?</span>
+              <button
+                type="button"
+                onClick={openLoginModal}
+                className="text-xs font-bold text-purple-700 underline hover:text-purple-900 cursor-pointer"
+              >
+                Log In
+              </button>
+            </div>
+          )}
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                addToCart(product);
+                if (onBack) onBack();
+              }}
+              className="w-full sm:w-auto bg-udemy-purple hover:bg-udemy-purple-hover text-white text-xs font-bold px-6 py-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>Enroll Now &amp; Unlock Full Access</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-full sm:w-auto border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-5 py-3 rounded-xl transition cursor-pointer"
+            >
+              Back to Course
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // -------------------------------------------------------------
   // SCREEN 1: PRE-TEST CONFIRMATION & EXAM MODE SETTINGS GATE (UDEMY STYLE)

@@ -17,7 +17,8 @@ import {
   HelpCircle,
   AlertCircle,
   Check,
-  RotateCcw
+  RotateCcw,
+  Lock
 } from 'lucide-react';
 
 export default function ProductDetailPage({ product, onTakeTest, onBack, onNavigate }) {
@@ -280,13 +281,26 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
                             <span>•</span>
                             <span>Auto-submit on 00:00:00</span>
                           </div>
-                          <button
-                            onClick={() => onTakeTest(product, test.testNumber)}
-                            className="bg-udemy-purple hover:bg-udemy-purple-hover text-white font-bold px-4 py-2 rounded-lg transition text-xs flex items-center space-x-1.5 shadow-sm"
-                          >
-                            <PlayCircle className="w-4 h-4" />
-                            <span>Start Practice Test {test.testNumber}</span>
-                          </button>
+                          {isEnrolled || product.isFree ? (
+                            <button
+                              onClick={() => onTakeTest(product, test.testNumber)}
+                              className="bg-udemy-purple hover:bg-udemy-purple-hover text-white font-bold px-4 py-2 rounded-lg transition text-xs flex items-center space-x-1.5 shadow-sm"
+                            >
+                              <PlayCircle className="w-4 h-4" />
+                              <span>Start Practice Test {test.testNumber}</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                addToCart(product);
+                                if (onNavigate) onNavigate('checkout');
+                              }}
+                              className="bg-slate-900 hover:bg-black text-white font-bold px-4 py-2 rounded-lg transition text-xs flex items-center space-x-1.5 shadow-sm"
+                            >
+                              <Lock className="w-4 h-4 text-purple-300" />
+                              <span>Unlock Practice Test {test.testNumber}</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

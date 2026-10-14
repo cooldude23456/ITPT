@@ -96,13 +96,21 @@ CREATE TABLE IF NOT EXISTS public.orders (
     subtotal NUMERIC DEFAULT 0,
     discount NUMERIC DEFAULT 0,
     total NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'PENDING',
     payment_method TEXT,
     payment_gateway TEXT,
     transaction_id TEXT,
+    gateway_order_id TEXT,
+    signature TEXT,
     admin_notification_sent BOOLEAN DEFAULT TRUE,
     admin_notification_recipient TEXT DEFAULT 'support@itpracticetests.com',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Safe migration for existing orders table:
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDING';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS gateway_order_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS signature TEXT;
 
 -- 6. USERS & PROFILES TABLE
 CREATE TABLE IF NOT EXISTS public.users_profiles (
@@ -155,13 +163,19 @@ CREATE TABLE IF NOT EXISTS public.test_attempts (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. STUDENT ENROLLMENTS TABLE
+-- 10. STUDENT ENROLLMENTS TABLE (Server-Verified Lifetime Access)
 CREATE TABLE IF NOT EXISTS public.enrollments (
     id TEXT PRIMARY KEY,
     user_email TEXT NOT NULL,
     product_id TEXT NOT NULL,
+    order_id TEXT,
+    status TEXT DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Safe migration for existing enrollments table:
+ALTER TABLE public.enrollments ADD COLUMN IF NOT EXISTS order_id TEXT;
+ALTER TABLE public.enrollments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';
 
 -- ==============================================================================
 -- ENABLE ROW LEVEL SECURITY (RLS) & SET PERMISSIVE ACCESS POLICIES

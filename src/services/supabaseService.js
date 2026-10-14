@@ -794,3 +794,72 @@ export async function syncAllLocalDataToSupabase({ products, blogs, coupons, gat
     };
   }
 }
+
+// ==============================================================================
+// 4. SECURE SERVER API GATEWAY CLIENT (Zero-Trust Backend Verification)
+// ==============================================================================
+
+export async function createPendingOrderApi(orderData) {
+  try {
+    const res = await fetch('/api/orders/create-pending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('[API Error] createPendingOrderApi:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function verifyPaymentApi(verificationData) {
+  try {
+    const res = await fetch('/api/orders/verify-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verificationData)
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('[API Error] verifyPaymentApi:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function verifyServerCourseAccess(email, productId) {
+  try {
+    const res = await fetch('/api/access/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, productId })
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('[API Error] verifyServerCourseAccess:', err);
+    return { hasAccess: false, error: err.message };
+  }
+}
+
+export async function fetchServerEnrolledCourses(email) {
+  try {
+    if (!email) return [];
+    const res = await fetch(`/api/access/enrolled?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    return data?.enrolledProductIds || [];
+  } catch (err) {
+    console.error('[API Error] fetchServerEnrolledCourses:', err);
+    return [];
+  }
+}
+
+export async function fetchActiveGatewaysApi() {
+  try {
+    const res = await fetch('/api/gateways');
+    const data = await res.json();
+    return data?.gateways || [];
+  } catch (err) {
+    console.error('[API Error] fetchActiveGatewaysApi:', err);
+    return [];
+  }
+}

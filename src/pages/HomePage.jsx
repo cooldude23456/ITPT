@@ -142,7 +142,17 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
 
               <button
                 onClick={() => {
-                  const freeItem = products.find(p => p.id === 'free-az900-diagnostic') || products[0];
+                  const freeItem = products.find(p => p.id === 'free-az900-diagnostic' || p.isFree || p.priceINR === 0) || {
+                    id: 'free-az900-diagnostic',
+                    title: 'Microsoft Azure Fundamentals AZ-900 Free Diagnostic Exam Simulator',
+                    vendor: 'Microsoft',
+                    category: 'certifications',
+                    isFree: true,
+                    priceINR: 0,
+                    priceUSD: 0,
+                    passingScore: 70,
+                    durationMinutes: 45
+                  };
                   onTakeTest(freeItem);
                 }}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition flex items-center justify-center space-x-2 shadow-sm"
@@ -480,7 +490,17 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
             </button>
             <button
               onClick={() => {
-                const freeItem = products.find(p => p.isFree) || products[0];
+                const freeItem = products.find(p => p.id === 'free-az900-diagnostic' || p.isFree || p.priceINR === 0) || {
+                  id: 'free-az900-diagnostic',
+                  title: 'Microsoft Azure Fundamentals AZ-900 Free Diagnostic Exam Simulator',
+                  vendor: 'Microsoft',
+                  category: 'certifications',
+                  isFree: true,
+                  priceINR: 0,
+                  priceUSD: 0,
+                  passingScore: 70,
+                  durationMinutes: 45
+                };
                 onTakeTest(freeItem);
               }}
               className="bg-purple-950/60 border border-purple-400/40 hover:bg-purple-950 text-white font-bold px-6 py-3 rounded-lg text-xs transition"

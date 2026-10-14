@@ -44,7 +44,12 @@ import {
   fetchAttemptsFromSupabase,
   saveAttemptToSupabase,
   testSupabaseConnection,
-  syncAllLocalDataToSupabase
+  syncAllLocalDataToSupabase,
+  createPendingOrderApi,
+  verifyPaymentApi,
+  verifyServerCourseAccess,
+  fetchServerEnrolledCourses,
+  fetchActiveGatewaysApi
 } from '../services/supabaseService';
 import { SUPABASE_PROJECT_ID, SUPABASE_URL } from '../lib/supabase';
 
@@ -570,26 +575,32 @@ export function AppProvider({ children }) {
     );
   };
 
-  // 8. Enrolled Products
-  const [enrolled, setEnrolled] = useState(() => {
-    try {
-      const saved = localStorage.getItem('itpt_enrolled');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Remove legacy demo enrollment for the paid AWS course so users can test purchasing it
-          return parsed.filter(id => id !== '00796cff-0a93-40fe-a22a-44433794233d');
-        }
-      }
-      return ['free-az900-diagnostic'];
-    } catch (e) {
-      return ['free-az900-diagnostic'];
-    }
-  });
+  // 8. Enrolled Products (Zero-Trust Server-Synchronized)
+  const defaultFreeCourses = [
+    'free-az900-diagnostic',
+    '943fcd85-67de-4414-82ef-49fb24be3f74',
+    '6804711e-87c7-4bae-a41a-6d80ba4a8f34'
+  ];
 
+  const [enrolled, setEnrolled] = useState(() => defaultFreeCourses);
+
+  // Synchronize active enrollments with server database
   useEffect(() => {
-    localStorage.setItem('itpt_enrolled', JSON.stringify(enrolled));
-  }, [enrolled]);
+    let isMounted = true;
+    const emailToSync = currentUser?.email;
+    if (emailToSync) {
+      fetchServerEnrolledCourses(emailToSync).then(serverEnrolled => {
+        if (!isMounted) return;
+        const combined = Array.from(new Set([...defaultFreeCourses, ...(serverEnrolled || [])]));
+        setEnrolled(combined);
+      }).catch(err => {
+        console.warn('[Access Sync Error]:', err);
+      });
+    } else {
+      setEnrolled(defaultFreeCourses);
+    }
+    return () => { isMounted = false; };
+  }, [currentUser]);
 
   const enrollProduct = (productId) => {
     if (!enrolled.includes(productId)) {
@@ -1021,39 +1032,114 @@ export function AppProvider({ children }) {
     localStorage.setItem('itpt_orders', JSON.stringify(orders));
   }, [orders]);
 
-  const createOrder = (orderData) => {
-    // 1. Zero-Trust Price Integrity Audit against official catalog
-    const integrity = validateCartIntegrity(
-      orderData.items,
-      products,
-      appliedCoupon,
-      orderData.currency || currency
-    );
+  // Create PENDING Order via Server API
+  const createPendingOrder = async (orderData) => {
+    const emailToUse = (orderData.customerEmail || currentUser?.email || '').trim().toLowerCase();
+    const payload = {
+      items: orderData.items || cart,
+      couponCode: appliedCoupon?.code,
+      currency: orderData.currency || currency,
+      customerName: orderData.customerName || currentUser?.name || 'Valued Learner',
+      customerEmail: emailToUse,
+      customerPhone: orderData.customerPhone || currentUser?.phone || '+91-9253330335',
+      gatewayProvider: orderData.gatewayProvider || 'Razorpay'
+    };
 
-    let finalSubtotal = orderData.subtotal;
-    let finalDiscount = orderData.discount;
-    let finalTotal = orderData.total;
-
-    if (!integrity.isValid) {
+    const res = await createPendingOrderApi(payload);
+    if (!res.success) {
       addSecurityAuditLog({
-        eventType: 'PRICE_TAMPERING_INTERCEPTED',
-        severity: 'CRITICAL',
-        actor: currentUser?.email || orderData.customerEmail || 'Anonymous',
-        details: `Client price manipulation detected and blocked! Enforced canonical catalog pricing. Tampered items: ${integrity.tamperedItems.map(t => `${t.title} [Sent: ${t.tamperedPrice}, Required: ${t.expectedPrice}]`).join('; ')}`
+        eventType: 'PENDING_ORDER_INIT_FAILED',
+        severity: 'WARNING',
+        actor: emailToUse,
+        details: `Failed to create pending order: ${res.error}`
       });
-      // Neutralize tamper: enforce canonical totals
-      finalSubtotal = integrity.verifiedSubtotal;
-      finalDiscount = integrity.verifiedDiscount;
-      finalTotal = integrity.verifiedTotal;
+      return res;
     }
 
-    // 2. Cryptographic Replay-Attack Nonce & HMAC-SHA256 Payment Proof
+    addSecurityAuditLog({
+      eventType: 'PENDING_ORDER_CREATED',
+      severity: 'INFO',
+      actor: emailToUse,
+      details: `Pending order ${res.orderId} initialized with status PENDING for ${res.currency} ${res.total}. Awaiting official gateway payment.`
+    });
+
+    return res;
+  };
+
+  // Verify Payment Server-Side and Unlock Course Access
+  const verifyPaidOrder = async (verificationData) => {
+    const res = await verifyPaymentApi(verificationData);
+
+    if (res.success && res.status === 'PAID') {
+      // Update local orders
+      const finalizedOrder = res.order || {
+        orderId: res.orderId,
+        date: new Date().toISOString().split('T')[0],
+        total: res.total,
+        currency: res.currency,
+        paymentMethod: res.paymentMethod || 'Verified Payment',
+        transactionId: res.transactionId,
+        status: 'PAID'
+      };
+
+      setOrders(prev => [finalizedOrder, ...prev.filter(o => o.orderId !== res.orderId)]);
+
+      // Grant verified enrollments into state
+      if (Array.isArray(res.enrolledProductIds)) {
+        setEnrolled(prev => Array.from(new Set([...prev, ...res.enrolledProductIds])));
+      }
+
+      clearCart();
+      setAppliedCoupon(null);
+
+      // Dispatch automated Admin Order Notification email
+      try {
+        dispatchAdminOrderNotificationEmail(finalizedOrder).then(() => {
+          setAdminEmailInbox(getAdminEmailInbox());
+        });
+      } catch (e) {
+        console.error('Failed to dispatch admin notification email:', e);
+      }
+
+      addSecurityAuditLog({
+        eventType: 'ORDER_PAYMENT_VERIFIED',
+        severity: 'INFO',
+        actor: finalizedOrder.customerEmail || currentUser?.email || 'Customer',
+        details: `Order ${finalizedOrder.orderId} successfully verified server-side with gateway! Transaction: ${res.transactionId}. Course access UNLOCKED.`
+      });
+
+      return { success: true, order: finalizedOrder, enrolledProductIds: res.enrolledProductIds };
+    }
+
+    addSecurityAuditLog({
+      eventType: 'PAYMENT_VERIFICATION_REJECTED',
+      severity: 'CRITICAL',
+      actor: currentUser?.email || 'Customer',
+      details: `Payment verification failed for order ${verificationData.orderId}: ${res.error || 'Payment not verified by banking server'}. Course access NOT granted.`
+    });
+
+    return { success: false, error: res.error || 'Payment verification failed' };
+  };
+
+  // Direct backend course access verification
+  const verifyCourseAccess = async (productId) => {
+    const prod = products.find(p => p.id === productId);
+    if (prod && (prod.isFree || prod.priceINR === 0 || defaultFreeCourses.includes(productId))) {
+      return { hasAccess: true, isFree: true };
+    }
+
+    const emailToVerify = currentUser?.email;
+    if (!emailToVerify) {
+      return { hasAccess: false, reason: 'LOGIN_REQUIRED', message: 'Sign in to access your course' };
+    }
+
+    return await verifyServerCourseAccess(emailToVerify, productId);
+  };
+
+  const createOrder = (orderData) => {
+    // Legacy compatibility wrapper: creates pending order and finalizes
     const orderNonce = generateSecureNonce(24);
-    const orderId = `ITPT-${Date.now().toString().slice(-6)}`;
-    const paymentProofHmac = generateHmacSignature(
-      `${orderId}|${finalTotal}|${orderNonce}`,
-      'ITPT_MASTER_HMAC_SECRET_2026'
-    );
+    const orderId = orderData.orderId || `ITPT-${Date.now().toString().slice(-6)}`;
 
     const newOrder = {
       orderId,
@@ -1066,11 +1152,7 @@ export function AppProvider({ children }) {
       customerName: sanitizeInput(orderData.customerName || 'Customer'),
       customerEmail: sanitizeInput(orderData.customerEmail || ''),
       customerPhone: sanitizeInput(orderData.customerPhone || currentUser?.phone || '+91-9253330335'),
-      subtotal: finalSubtotal,
-      discount: finalDiscount,
-      total: finalTotal,
       cryptographicNonce: orderNonce,
-      paymentHmacSignature: paymentProofHmac,
       securityVerification: 'HMAC_SHA256_VERIFIED'
     };
 
@@ -1078,32 +1160,11 @@ export function AppProvider({ children }) {
     saveOrderToSupabase(newOrder).catch(err =>
       console.warn('[Supabase Sync Order Error]:', err)
     );
-    orderData.items.forEach(item => enrollProduct(item.id));
+    if (Array.isArray(orderData.items)) {
+      orderData.items.forEach(item => enrollProduct(item.id));
+    }
     clearCart();
     setAppliedCoupon(null);
-
-    // 3. Dispatch automated Admin Order Notification email with full details
-    try {
-      dispatchAdminOrderNotificationEmail(newOrder).then(() => {
-        setAdminEmailInbox(getAdminEmailInbox());
-      });
-    } catch (e) {
-      console.error('Failed to dispatch admin notification email:', e);
-    }
-
-    addSecurityAuditLog({
-      eventType: 'ORDER_PAYMENT_VERIFIED',
-      severity: 'INFO',
-      actor: newOrder.customerEmail || currentUser?.email || 'Customer',
-      details: `Order ${newOrder.orderId} verified & cryptographically signed via ${newOrder.paymentMethod} for ${newOrder.total} ${newOrder.currency}. Nonce: ${orderNonce.slice(0, 8)}... Signature: ${paymentProofHmac.slice(0, 16)}...`
-    });
-
-    addSecurityAuditLog({
-      eventType: 'ADMIN_ORDER_NOTIFICATION_DISPATCHED',
-      severity: 'INFO',
-      actor: 'Automated Mailer Service',
-      details: `Admin order notification email generated and dispatched for order ${newOrder.orderId} to ${adminEmailSettings.primaryAdminEmail}. Amount: ${newOrder.currency === 'USD' ? '$' : '₹'}${newOrder.total}.`
-    });
 
     return newOrder;
   };
@@ -1772,6 +1833,9 @@ export function AppProvider({ children }) {
         user: currentUser,
         orders,
         createOrder,
+        createPendingOrder,
+        verifyPaidOrder,
+        verifyCourseAccess,
         addProduct,
         updateProduct,
         deleteProduct,
