@@ -156,9 +156,15 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   const [selectedGatewayId, setSelectedGatewayId] = useState(() => {
     return activeGateways[0]?.id || 'gw-razorpay';
   });
+  const [selectedProvider, setSelectedProvider] = useState(() => {
+    return activeGateways[0]?.provider || 'Razorpay';
+  });
 
-  // Keep selectedGateway in sync
-  const selectedGateway = activeGateways.find(g => g.id === selectedGatewayId) || activeGateways[0] || defaultGateways[0];
+  // Keep selectedGateway in sync by matching ID or Provider name
+  const selectedGateway = activeGateways.find(g => 
+    g.id === selectedGatewayId || 
+    (g.provider && selectedProvider && g.provider.toLowerCase() === selectedProvider.toLowerCase())
+  ) || activeGateways[0] || defaultGateways[0];
 
   // Payment UI & Verification States
   const [isProcessing, setIsProcessing] = useState(false);
@@ -173,6 +179,13 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   const [showPayuModal, setShowPayuModal] = useState(false);
   const [showCcavenueModal, setShowCcavenueModal] = useState(false);
   const [showUpiModal, setShowUpiModal] = useState(false);
+
+  // Official Payment Link Modal States
+  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
+  const [activePaymentLink, setActivePaymentLink] = useState('');
+  const [paymentRefInput, setPaymentRefInput] = useState('');
+  const [isVerifyingRef, setIsVerifyingRef] = useState(false);
+  const [refVerifyError, setRefVerifyError] = useState(null);
 
   // Modal Interactive States
   const [cashfreeTab, setCashfreeTab] = useState('upi'); // 'upi' | 'card' | 'netbanking'
@@ -365,7 +378,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       return;
     }
 
-    const provider = selectedGateway?.provider || 'Razorpay';
+    const provider = selectedGateway?.provider || selectedProvider || 'Razorpay';
     const payCurrency = provider === 'PayPal' ? 'USD' : (currency || 'INR');
 
     setIsProcessing(true);
@@ -392,7 +405,23 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     setIsProcessing(false);
     setVerificationStage('');
 
-    // 3. Step 2: Open Official Modal for Selected Payment Gateway
+    // 3. Step 2: Check if Gateway or Course has an official direct Payment Link
+    const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
+    const coursePaymentLink = cart[0]?.paymentLink || cart[0]?.paymentLinks?.[provider.toLowerCase()];
+    const directLink = gwPaymentLink || coursePaymentLink;
+
+    if (directLink && directLink.trim().startsWith('http')) {
+      setActivePaymentLink(directLink.trim());
+      setShowPaymentLinkModal(true);
+      try {
+        window.open(directLink.trim(), '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        console.warn('Popup blocked, modal fallback displayed');
+      }
+      return;
+    }
+
+    // 4. Step 3: Open Official Modal for Selected Payment Gateway
     if (provider === 'Razorpay' || provider.toLowerCase().includes('razorpay')) {
       await launchRazorpayModal(orderRes, finalEmail);
     } else if (provider === 'PayPal') {
@@ -407,6 +436,37 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       setShowUpiModal(true);
     } else {
       await launchRazorpayModal(orderRes, finalEmail);
+    }
+  };
+
+  // Verify payment completed via direct payment link
+  const handleVerifyPaymentLinkSubmit = async () => {
+    if (!paymentRefInput.trim()) {
+      setRefVerifyError('Please enter your payment reference, transaction ID, or UPI UTR number.');
+      return;
+    }
+
+    setIsVerifyingRef(true);
+    setRefVerifyError(null);
+
+    const activeOrderId = pendingOrderInfo?.orderId || `ITPT-ORD-${Date.now()}`;
+    const provider = selectedGateway?.provider || selectedProvider || 'Razorpay';
+
+    const verifyRes = await verifyPaidOrder({
+      orderId: activeOrderId,
+      paymentId: paymentRefInput.trim(),
+      utrNumber: paymentRefInput.trim(),
+      gatewayProvider: provider
+    });
+
+    setIsVerifyingRef(false);
+
+    if (verifyRes.success && verifyRes.status === 'PAID') {
+      setShowPaymentLinkModal(false);
+      setCompletedOrder(verifyRes.order);
+      setCheckoutStep('success');
+    } else {
+      setRefVerifyError(verifyRes.error || 'Server could not verify payment. Please confirm your transaction ID.');
     }
   };
 
@@ -1087,12 +1147,15 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                   {/* Gateway Option Radio Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     {activeGateways.map((gw) => {
-                      const isSelected = selectedGatewayId === gw.id;
+                      const isSelected = (gw.id === selectedGatewayId) ||
+                        (selectedProvider && gw.provider?.toLowerCase() === selectedProvider.toLowerCase());
+                      const hasPaymentLink = Boolean(gw.paymentLink || gw.payment_link);
                       return (
                         <div
                           key={gw.id}
                           onClick={() => {
                             setSelectedGatewayId(gw.id);
+                            setSelectedProvider(gw.provider);
                             setPaymentError(null);
                           }}
                           className={`p-4 rounded-xl border-2 transition cursor-pointer text-left space-y-2 ${
@@ -1117,12 +1180,17 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                             </span>
                           </div>
 
-                          <div className="flex flex-wrap gap-1 text-[10px] text-gray-500 pl-6">
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500 pl-6">
                             {(gw.supportedMethods || ['Cards', 'UPI', 'NetBanking']).slice(0, 3).map((m, i) => (
                               <span key={i} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded">
                                 {m}
                               </span>
                             ))}
+                            {hasPaymentLink && (
+                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-semibold">
+                                Payment Link Ready
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -1140,19 +1208,49 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                           </span>
                         </div>
                         <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
-                          Official Modal Integration
+                          {selectedGateway.paymentLink || selectedGateway.payment_link ? 'Official Payment Link' : 'Official Gateway Integration'}
                         </span>
                       </div>
 
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Click below to open the official <strong>{selectedGateway.provider}</strong> checkout modal. Complete your payment to unlock lifetime course access instantly.
+                        {selectedGateway.paymentLink || selectedGateway.payment_link ? (
+                          <>
+                            Click below to open the official verified <strong>{selectedGateway.provider} Payment Link</strong>. Complete payment on the gateway page to unlock course access instantly.
+                          </>
+                        ) : (
+                          <>
+                            Click below to launch official <strong>{selectedGateway.provider}</strong> checkout. Complete your payment to unlock lifetime course access instantly.
+                          </>
+                        )}
                       </p>
+
+                      {/* Fast Email Input if guest hasn't filled email yet */}
+                      {!currentUser && !customerEmail && (
+                        <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1.5 text-xs">
+                          <label className="font-bold text-slate-800 flex items-center space-x-1.5">
+                            <Mail className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Your Email Address (For Instant Course Access & GST Receipt) *</span>
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={customerEmail}
+                            onChange={(e) => {
+                              setCustomerEmail(e.target.value);
+                              if (emailValidationError) setEmailValidationError(false);
+                              if (paymentError) setPaymentError(null);
+                            }}
+                            placeholder="Enter your email to receive course access"
+                            className="w-full bg-white px-3.5 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                          />
+                        </div>
+                      )}
 
                       {/* Inline Validation Warning if Email Missing */}
                       {emailValidationError && (
                         <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-bold flex items-center space-x-2 animate-shake">
                           <AlertTriangle className="w-4 h-4 shrink-0" />
-                          <span>Please fill in your Email Address in Section 1 above to open the payment modal.</span>
+                          <span>Please fill in your Email Address above to proceed to payment.</span>
                         </div>
                       )}
 
@@ -1298,6 +1396,146 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
         {/* ========================================================================= */}
         {/* OFFICIAL GATEWAY MODALS                                                   */}
         {/* ========================================================================= */}
+
+        {/* 0. OFFICIAL PAYMENT LINK & VERIFICATION MODAL */}
+        {showPaymentLinkModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
+              <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center font-bold text-white text-xs">
+                    {(selectedGateway.provider || 'GW').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-white">
+                      {selectedGateway.name || selectedGateway.provider}
+                    </h3>
+                    <p className="text-[10px] text-purple-300">Official Gateway Payment Link</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentLinkModal(false)}
+                  className="text-white/70 hover:text-white text-sm font-bold p-1 rounded transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {/* Order Info Card */}
+                <div className="bg-purple-50/50 border border-purple-200/80 rounded-xl p-4 space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Order Reference:</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {pendingOrderInfo?.orderId || 'PENDING'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Customer Email:</span>
+                    <span className="font-medium text-slate-800">
+                      {customerEmail || currentUser?.email}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-purple-200 pt-2 font-bold">
+                    <span className="text-slate-800">Amount Due:</span>
+                    <span className="text-base font-black text-purple-700">
+                      {selectedGateway.provider === 'PayPal' ? `$${totalUSD} USD` : `₹${totalINR}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step 1: Open Payment Link */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 font-bold text-[11px] flex items-center justify-center">
+                      1
+                    </span>
+                    <h4 className="font-bold text-xs text-slate-800">
+                      Complete Payment on Official Payment Page
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-600 pl-7 leading-relaxed">
+                    We opened the official <strong>{selectedGateway.provider}</strong> payment window. If your browser blocked the new window, click the button below:
+                  </p>
+                  <div className="pl-7 pt-1">
+                    <a
+                      href={activePaymentLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Open {selectedGateway.provider} Payment Link</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Step 2: Verification Input */}
+                <div className="border-t border-slate-100 pt-4 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[11px] flex items-center justify-center">
+                      2
+                    </span>
+                    <h4 className="font-bold text-xs text-slate-800">
+                      Enter Transaction / Payment ID to Activate Course Access
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-600 pl-7 leading-relaxed">
+                    Once paid, copy your Transaction ID or Payment Reference (e.g. <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">pay_...</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">cf_...</code>, or 12-digit UTR) and paste below:
+                  </p>
+
+                  <div className="pl-7 space-y-3">
+                    <input
+                      type="text"
+                      value={paymentRefInput}
+                      onChange={(e) => {
+                        setPaymentRefInput(e.target.value);
+                        setRefVerifyError(null);
+                      }}
+                      placeholder="e.g. pay_29X82kQ9... or 12-digit UTR / Transaction ID"
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+
+                    {refVerifyError && (
+                      <p className="text-xs text-rose-600 font-bold">{refVerifyError}</p>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={isVerifyingRef || !paymentRefInput.trim()}
+                      onClick={handleVerifyPaymentLinkSubmit}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs py-3 rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      {isVerifyingRef ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Verifying Payment Server-Side...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Confirm Payment & Unlock Course</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 text-[11px] border-t border-slate-100 text-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentLinkModal(false)}
+                    className="text-gray-500 hover:text-black hover:underline cursor-pointer"
+                  >
+                    Cancel and return
+                  </button>
+                  <span>256-Bit SSL Encrypted Verification</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 1. RAZORPAY LOADING MODAL */}
         {showRazorpayLoadingModal && (

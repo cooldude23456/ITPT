@@ -365,6 +365,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
       currency: editGatewayForm.currency,
       environment: editGatewayForm.environment,
       isTestMode: editGatewayForm.isTestMode,
+      paymentLink: editGatewayForm.paymentLink,
       isEnabled: editGatewayForm.isEnabled
     };
 
@@ -1220,6 +1221,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
                             currency: gw.currency || (gw.provider === 'PayPal' ? 'USD' : 'INR'),
                             environment: gw.environment || (gw.isTestMode ? 'SANDBOX' : 'PRODUCTION'),
                             isTestMode: gw.isTestMode ?? false,
+                            paymentLink: gw.paymentLink || gw.payment_link || '',
                             isEnabled: gw.isEnabled ?? true
                           });
                           setShowEditGatewayModal(true);
@@ -3275,6 +3277,20 @@ export default function AdminPanelPage({ onSelectProduct }) {
                   </div>
                 </>
               )}
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Official Direct Payment Link (Optional)</label>
+                <input
+                  type="url"
+                  placeholder="e.g. https://rzp.io/l/... or https://payments.cashfree.com/links/... or https://pmny.in/..."
+                  value={editGatewayForm.paymentLink || ''}
+                  onChange={(e) => setEditGatewayForm({ ...editGatewayForm, paymentLink: e.target.value })}
+                  className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono text-xs"
+                />
+                <span className="text-[10px] text-gray-500 mt-0.5 block">
+                  Provide your official Payment Link from Razorpay, Cashfree, PayU, or PayPal for direct zero-failure checkout.
+                </span>
+              </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>

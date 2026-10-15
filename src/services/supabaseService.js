@@ -591,6 +591,7 @@ export async function fetchGatewaysFromSupabase() {
         webhookSecret: g.webhook_secret,
         isEnabled: Boolean(g.is_enabled),
         isTestMode: Boolean(g.is_test_mode),
+        paymentLink: g.payment_link || g.paymentLink || '',
         supportedMethods: Array.isArray(g.supported_methods) ? g.supported_methods : []
       }));
     }
@@ -609,6 +610,7 @@ export async function saveGatewayToSupabase(gw) {
       provider: gw.provider,
       key_id: gw.keyId,
       webhook_secret: gw.webhookSecret,
+      payment_link: gw.paymentLink || gw.payment_link || '',
       is_enabled: Boolean(gw.isEnabled ?? true),
       is_test_mode: Boolean(gw.isTestMode ?? true),
       supported_methods: Array.isArray(gw.supportedMethods) ? gw.supportedMethods : []
