@@ -9,6 +9,7 @@ import {
   grantEnrollment,
   getEnrolledCourseIds
 } from '../db.js';
+import { sendAdminOrderEmail } from '../mailer.js';
 
 const router = express.Router();
 
@@ -136,6 +137,12 @@ router.post('/orders/create-pending', async (req, res) => {
           orderId
         });
       }
+
+      // Automatically dispatch admin order notification email
+      sendAdminOrderEmail(newOrder).catch(mailErr => {
+        console.error('[Mailer] Free order email dispatch error:', mailErr.message);
+      });
+
       return res.status(200).json({
         success: true,
         orderId,
@@ -382,6 +389,11 @@ router.post('/orders/verify-payment', async (req, res) => {
 
     const allUserEnrolled = await getEnrolledCourseIds(order.customerEmail);
 
+    // 6. Asynchronously dispatch real-time Order Notification Email to Store Administrator
+    sendAdminOrderEmail(updatedOrder).catch(mailErr => {
+      console.error('[Mailer] Background email dispatch error:', mailErr.message);
+    });
+
     return res.status(200).json({
       success: true,
       status: 'PAID',
@@ -427,6 +439,11 @@ router.post('/webhooks/:gateway', async (req, res) => {
               paymentMethod: 'Razorpay Webhook (payment.captured)',
               paymentGateway: 'Razorpay'
             });
+
+            sendAdminOrderEmail({ ...order, status: 'PAID', transactionId: paymentEntity.id }).catch(mailErr => {
+              console.error('[Mailer] Webhook email dispatch error:', mailErr.message);
+            });
+
             if (Array.isArray(order.items)) {
               for (const item of order.items) {
                 await grantEnrollment({

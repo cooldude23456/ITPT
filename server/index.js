@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import paymentsRouter from './routes/payments.js';
 import accessRouter from './routes/access.js';
+import adminEmailRouter from './routes/adminEmail.js';
 import { getActiveGateways } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,7 @@ app.get('/api/gateways', async (req, res) => {
 // Mount Routes
 app.use('/api', paymentsRouter);
 app.use('/api', accessRouter);
+app.use('/api/admin', adminEmailRouter);
 
 // Serve static frontend build when running standalone production server
 const distPath = path.resolve(__dirname, '../dist');

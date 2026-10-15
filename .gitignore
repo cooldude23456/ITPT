@@ -29,3 +29,6 @@ dist-ssr
 .env.local
 .env.production.local
 .env.development.local
+
+# Local server runtime data
+server/data/

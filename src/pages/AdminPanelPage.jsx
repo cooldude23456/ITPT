@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { parseExcelOrCsvFile, downloadSampleExcelTemplate } from '../utils/excelParser';
 import { generateHmacSignature, verifyPaymentSignature, maskSecretKey } from '../utils/security';
@@ -82,6 +82,8 @@ export default function AdminPanelPage({ onSelectProduct }) {
     adminEmailSettings,
     updateAdminEmailSettings,
     adminEmailInbox,
+    fetchAdminEmailLogs,
+    fetchAdminEmailSettings,
     resendAdminOrderEmail,
     dispatchTestAdminEmail,
     supabaseStatus,
@@ -106,9 +108,31 @@ export default function AdminPanelPage({ onSelectProduct }) {
     primaryAdminEmail: adminEmailSettings?.primaryAdminEmail || 'support@itpracticetests.com',
     secondaryAdminEmail: adminEmailSettings?.secondaryAdminEmail || 'yogesh@itpracticetests.com',
     enableInstantEmail: adminEmailSettings?.enableInstantEmail ?? true,
-    webhookUrl: adminEmailSettings?.webhookUrl || ''
+    webhookUrl: adminEmailSettings?.webhookUrl || '',
+    smtpHost: adminEmailSettings?.smtpHost || 'smtp.gmail.com',
+    smtpPort: adminEmailSettings?.smtpPort || 465,
+    smtpSecure: adminEmailSettings?.smtpSecure ?? true,
+    smtpUser: adminEmailSettings?.smtpUser || '',
+    smtpPass: adminEmailSettings?.smtpPass || '',
+    senderName: adminEmailSettings?.senderName || 'ITPracticeTests Orders',
+    senderEmail: adminEmailSettings?.senderEmail || 'orders@itpracticetests.com'
   });
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [isSavingEmailSettings, setIsSavingEmailSettings] = useState(false);
+  const [isRefreshingLogs, setIsRefreshingLogs] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [resendStatusMap, setResendStatusMap] = useState({});
+
+  useEffect(() => {
+    if (adminEmailSettings) {
+      setEmailSettingsForm(prev => ({
+        ...prev,
+        ...adminEmailSettings,
+        smtpPass: adminEmailSettings.smtpPass || prev.smtpPass || ''
+      }));
+    }
+  }, [adminEmailSettings]);
 
   // Course management states
   const [courseSearch, setCourseSearch] = useState('');
@@ -1689,26 +1713,41 @@ export default function AdminPanelPage({ onSelectProduct }) {
             {/* SUB-TAB 2: ADMIN EMAIL NOTIFICATIONS MAILBOX */}
             {ordersSubTab === 'emails' && (
               <div className="bg-white rounded-2xl border border-udemy-border p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
                   <div>
                     <h3 className="font-extrabold text-base text-udemy-dark flex items-center space-x-2">
                       <Inbox className="w-5 h-5 text-purple-600" />
                       <span>Admin Order Notifications Mailbox</span>
                     </h3>
                     <p className="text-xs text-gray-500">
-                      Live audit log of all order notification emails sent to store administrator: <span className="font-mono text-purple-700 font-semibold">{adminEmailSettings?.primaryAdminEmail || 'support@itpracticetests.com'}</span>
+                      Live audit log of all order notification emails dispatched to store administrator: <span className="font-mono text-purple-700 font-semibold">{adminEmailSettings?.primaryAdminEmail || 'support@itpracticetests.com'}</span>
                     </p>
                   </div>
-                  <span className="text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200 px-3 py-1 rounded-full">
-                    {adminEmailInbox?.length || 0} Emails Dispatched
-                  </span>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <span className="text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200 px-3 py-1 rounded-full">
+                      {adminEmailInbox?.length || 0} Emails Dispatched
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsRefreshingLogs(true);
+                        if (fetchAdminEmailLogs) await fetchAdminEmailLogs();
+                        setIsRefreshingLogs(false);
+                      }}
+                      className="border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold px-3 py-1 rounded-lg transition flex items-center space-x-1"
+                      title="Refresh email logs"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingLogs ? 'animate-spin text-purple-600' : ''}`} />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
                 </div>
 
                 {(!adminEmailInbox || adminEmailInbox.length === 0) ? (
                   <div className="p-12 text-center text-xs text-gray-500 space-y-2">
                     <Mail className="w-10 h-10 text-gray-300 mx-auto" />
-                    <p className="font-bold text-sm text-gray-700">No emails dispatched yet.</p>
-                    <p>Click &quot;Test Admin Email&quot; above to simulate an incoming order alert.</p>
+                    <p className="font-bold text-sm text-gray-700">No order emails logged yet.</p>
+                    <p>When any user purchases an exam, or when you click &quot;Send Diagnostic Test Email&quot;, the dispatch appears here.</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -1721,22 +1760,52 @@ export default function AdminPanelPage({ onSelectProduct }) {
                           <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
                             <Mail className="w-4 h-4" />
                           </div>
-                          <div className="min-w-0 space-y-0.5">
-                            <div className="flex items-center space-x-2">
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-extrabold text-sm text-udemy-dark truncate">
                                 {email.subject}
                               </span>
-                              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                                {email.status || 'DELIVERED'}
-                              </span>
+                              {email.status === 'DELIVERED' && (
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0">
+                                  <Check className="w-3 h-3" />
+                                  <span>DELIVERED (SMTP)</span>
+                                </span>
+                              )}
+                              {email.status === 'SAVED_TO_MAILBOX' && (
+                                <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>SAVED TO MAILBOX (PENDING SMTP)</span>
+                                </span>
+                              )}
+                              {email.status === 'FAILED' && (
+                                <span className="bg-red-100 text-red-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0">
+                                  <XCircle className="w-3 h-3" />
+                                  <span>DISPATCH FAILED</span>
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-0.5">
                               <span>To: <strong className="font-mono text-purple-700">{email.recipient}</strong></span>
                               <span>•</span>
-                              <span>Customer: <strong>{email.customerName}</strong> ({email.customerEmail})</span>
-                              <span>•</span>
-                              <span>Transport: {email.transport || 'ITPracticeTests Cloud Dispatcher'}</span>
+                              <span>Customer: <strong>{email.customerName || 'Learner'}</strong> ({email.customerEmail})</span>
+                              {email.total && (
+                                <>
+                                  <span>•</span>
+                                  <span>Amount: <strong className="text-emerald-700 font-bold">{email.currency === 'USD' ? '$' : '₹'}{email.total}</strong></span>
+                                </>
+                              )}
+                              {email.orderId && (
+                                <>
+                                  <span>•</span>
+                                  <span>Order: <strong className="font-mono">{email.orderId}</strong></span>
+                                </>
+                              )}
                             </div>
+                            {email.error && (
+                              <div className="text-[11px] text-red-600 font-medium">
+                                Error: {email.error}
+                              </div>
+                            )}
                             <div className="text-[11px] text-gray-400">
                               Dispatched: {new Date(email.timestamp).toLocaleString()}
                             </div>
@@ -1744,6 +1813,29 @@ export default function AdminPanelPage({ onSelectProduct }) {
                         </div>
 
                         <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                          <button
+                            onClick={async () => {
+                              if (!email.orderId) return;
+                              setResendStatusMap(prev => ({ ...prev, [email.id]: 'sending' }));
+                              try {
+                                await resendAdminOrderEmail(email.orderId);
+                                setResendStatusMap(prev => ({ ...prev, [email.id]: 'sent' }));
+                                setTimeout(() => setResendStatusMap(prev => ({ ...prev, [email.id]: null })), 3000);
+                              } catch (e) {
+                                setResendStatusMap(prev => ({ ...prev, [email.id]: 'error' }));
+                              }
+                            }}
+                            disabled={resendStatusMap[email.id] === 'sending'}
+                            className="border border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1"
+                            title="Resend this order email to admin"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>
+                              {resendStatusMap[email.id] === 'sending' ? 'Sending...' :
+                               resendStatusMap[email.id] === 'sent' ? 'Resent ✓' :
+                               resendStatusMap[email.id] === 'error' ? 'Failed ✕' : 'Resend'}
+                            </span>
+                          </button>
                           <button
                             onClick={() => setSelectedEmailForInspection(email)}
                             className="bg-slate-900 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5"
@@ -1765,105 +1857,374 @@ export default function AdminPanelPage({ onSelectProduct }) {
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="font-extrabold text-base text-udemy-dark flex items-center space-x-2">
                     <Settings className="w-5 h-5 text-purple-600" />
-                    <span>Admin Order Email Notification Configuration</span>
+                    <span>Admin Order Email Notification &amp; SMTP Configuration</span>
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Configure the exact email addresses and automated webhooks that receive instant purchase notifications when any student buys a course or practice test.
+                    Configure the outgoing SMTP mail server (Gmail, Custom Domain, AWS SES) and recipient mailboxes so you receive instant order receipts with full details whenever any student buys a course.
                   </p>
                 </div>
 
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    updateAdminEmailSettings(emailSettingsForm);
-                    setSuccessNotice('✓ Admin email notification preferences saved successfully!');
-                  }}
-                  className="space-y-4 max-w-xl text-xs"
-                >
-                  <div>
-                    <label className="block font-bold text-gray-800 mb-1">
-                      Primary Admin Notification Recipient Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={emailSettingsForm.primaryAdminEmail}
-                      onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, primaryAdminEmail: e.target.value })}
-                      placeholder="support@itpracticetests.com"
-                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-medium"
-                    />
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      Every completed student checkout sends an immediate transaction receipt with full order and customer details to this address.
-                    </p>
+                {/* SMTP Status Overview Banner */}
+                {emailSettingsForm.smtpUser && (emailSettingsForm.smtpPass || emailSettingsForm.hasSmtpPassword) ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start space-x-3 text-xs text-emerald-900">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-emerald-950">
+                        Live SMTP Outgoing Server Connected: <span className="font-mono">{emailSettingsForm.smtpHost}:{emailSettingsForm.smtpPort}</span>
+                      </div>
+                      <div className="text-emerald-800">
+                        Orders are dispatched live to <strong className="font-mono">{emailSettingsForm.primaryAdminEmail}</strong> via <span className="font-mono">{emailSettingsForm.smtpUser}</span>.
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block font-bold text-gray-800 mb-1">
-                      Secondary Admin / CC Email (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      value={emailSettingsForm.secondaryAdminEmail}
-                      onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, secondaryAdminEmail: e.target.value })}
-                      placeholder="yogesh@itpracticetests.com"
-                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-medium"
-                    />
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      Additional recipient (e.g. instructor personal inbox or co-founder).
-                    </p>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start space-x-3 text-xs text-amber-900">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-amber-950">
+                        SMTP Mail Server Credentials Not Yet Configured
+                      </div>
+                      <div className="text-amber-800">
+                        All student orders are safely captured in the <strong className="underline cursor-pointer" onClick={() => setOrdersSubTab('emails')}>Admin Mailbox</strong>. To deliver copies directly to your real Gmail or Outlook inbox, enter your SMTP username and password below, or click <strong>&quot;⚡ Auto-Fill Gmail Settings&quot;</strong>.
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  <div>
-                    <label className="block font-bold text-gray-800 mb-1">
-                      Automated Sales Webhook URL (Slack, Discord, CRM, Zapier)
-                    </label>
-                    <input
-                      type="url"
-                      value={emailSettingsForm.webhookUrl}
-                      onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, webhookUrl: e.target.value })}
-                      placeholder="https://hooks.slack.com/services/... or https://maker.ifttt.com/..."
-                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono text-[11px]"
-                    />
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      Optional webhook triggered simultaneously with every order for instant team chat alerts.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="instantEmailToggle"
-                      checked={emailSettingsForm.enableInstantEmail}
-                      onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, enableInstantEmail: e.target.checked })}
-                      className="rounded text-purple-600 w-4 h-4"
-                    />
-                    <label htmlFor="instantEmailToggle" className="text-gray-800 font-bold cursor-pointer">
-                      Enable real-time instant email dispatch on every successful purchase
-                    </label>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 flex items-center space-x-3">
+                {/* Quick Auto-Fill Presets */}
+                <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="font-bold text-purple-950 flex items-center space-x-1.5">
+                    <Zap className="w-4 h-4 text-purple-600" />
+                    <span>Quick Configuration Presets:</span>
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
-                      type="submit"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm transition flex items-center space-x-1.5"
+                      type="button"
+                      onClick={() => {
+                        setEmailSettingsForm(prev => ({
+                          ...prev,
+                          smtpHost: 'smtp.gmail.com',
+                          smtpPort: 465,
+                          smtpSecure: true,
+                          senderName: 'ITPracticeTests Orders'
+                        }));
+                        setSuccessNotice('⚡ Applied Gmail SMTP presets (smtp.gmail.com:465 SSL)! Enter your Gmail and App Password below.');
+                      }}
+                      className="bg-white hover:bg-purple-100/70 border border-purple-200 text-purple-900 font-bold px-3 py-1.5 rounded-lg shadow-2xs transition"
                     >
-                      <Save className="w-4 h-4" />
-                      <span>Save Notification Preferences</span>
+                      ⚡ Auto-Fill Gmail Settings
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        setEmailSettingsForm(prev => ({
+                          ...prev,
+                          smtpHost: 'mail.itpracticetests.com',
+                          smtpPort: 465,
+                          smtpSecure: true,
+                          senderName: 'ITPracticeTests Orders',
+                          senderEmail: 'orders@itpracticetests.com'
+                        }));
+                        setSuccessNotice('🏢 Applied Custom Domain presets (mail.itpracticetests.com:465 SSL)!');
+                      }}
+                      className="bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold px-3 py-1.5 rounded-lg shadow-2xs transition"
+                    >
+                      🏢 Auto-Fill Custom Domain (cPanel / Webmail)
+                    </button>
+                  </div>
+                </div>
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setIsSavingEmailSettings(true);
+                    try {
+                      await updateAdminEmailSettings(emailSettingsForm);
+                      setSuccessNotice('✓ SMTP & Admin Email notification settings saved successfully to server!');
+                    } catch (err) {
+                      console.error('Error saving settings:', err);
+                    } finally {
+                      setIsSavingEmailSettings(false);
+                    }
+                  }}
+                  className="space-y-6 text-xs"
+                >
+                  {/* GROUP 1: ADMIN RECIPIENTS */}
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+                    <h4 className="font-extrabold text-sm text-gray-900 flex items-center space-x-1.5">
+                      <Mail className="w-4 h-4 text-purple-600" />
+                      <span>1. Store Administrator Inboxes (Where Order Alerts Go)</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          Primary Admin Notification Recipient Email *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={emailSettingsForm.primaryAdminEmail || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, primaryAdminEmail: e.target.value })}
+                          placeholder="support@itpracticetests.com"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Every verified purchase instantly delivers full customer, item, and payment details to this inbox.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          Secondary Admin / CC Email (Optional)
+                        </label>
+                        <input
+                          type="email"
+                          value={emailSettingsForm.secondaryAdminEmail || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, secondaryAdminEmail: e.target.value })}
+                          placeholder="yogesh@itpracticetests.com"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Optional CC recipient (instructor personal inbox, business co-founder, or accountant).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GROUP 2: OUTGOING SMTP SERVER */}
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+                    <h4 className="font-extrabold text-sm text-gray-900 flex items-center space-x-1.5">
+                      <Lock className="w-4 h-4 text-purple-600" />
+                      <span>2. Outgoing SMTP Server Configuration (How Emails Are Sent)</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block font-bold text-gray-800 mb-1">
+                          SMTP Host *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={emailSettingsForm.smtpHost || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, smtpHost: e.target.value })}
+                          placeholder="smtp.gmail.com or mail.itpracticetests.com"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-mono font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Default is <strong className="font-mono">smtp.gmail.com</strong> for Gmail or your custom domain mail server.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          SMTP Port *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          value={emailSettingsForm.smtpPort || 465}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, smtpPort: Number(e.target.value) })}
+                          placeholder="465"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-mono font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          465 (SSL / TLS Secure) or 587 (STARTTLS).
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          SMTP Username / Email *
+                        </label>
+                        <input
+                          type="text"
+                          value={emailSettingsForm.smtpUser || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, smtpUser: e.target.value })}
+                          placeholder="support@itpracticetests.com or yourname@gmail.com"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          The email account used to authenticate and send the messages.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          SMTP Password / Gmail App Password *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showSmtpPassword ? 'text' : 'password'}
+                            value={emailSettingsForm.smtpPass || ''}
+                            onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, smtpPass: e.target.value })}
+                            placeholder={emailSettingsForm.hasSmtpPassword ? '•••••••• (Configured - Enter new to replace)' : 'Enter 16-character Gmail App Password'}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2.5 pr-10 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                            tabIndex={-1}
+                          >
+                            {showSmtpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          For Gmail: Use a 16-character App Password (not your personal Google account password).
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          Sender Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={emailSettingsForm.senderName || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, senderName: e.target.value })}
+                          placeholder="ITPracticeTests Orders"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Shows as the sender name in the email header (e.g. &quot;ITPracticeTests Orders&quot;).
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-gray-800 mb-1">
+                          Sender &quot;From&quot; Address
+                        </label>
+                        <input
+                          type="email"
+                          value={emailSettingsForm.senderEmail || ''}
+                          onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, senderEmail: e.target.value })}
+                          placeholder="orders@itpracticetests.com"
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          The From header in emails (matches SMTP user or verified alias).
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Gmail Guide Box */}
+                    <div className="bg-slate-100 border border-slate-200/90 rounded-lg p-3 text-slate-700 space-y-1 text-[11px]">
+                      <div className="font-bold text-slate-900 flex items-center space-x-1.5">
+                        <Key className="w-3.5 h-3.5 text-purple-600" />
+                        <span>How to get a Gmail App Password in 60 seconds:</span>
+                      </div>
+                      <ol className="list-decimal list-inside space-y-0.5 text-slate-600">
+                        <li>Go to Google Account Security: <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-purple-700 underline font-semibold">myaccount.google.com/security</a></li>
+                        <li>Turn on <strong>2-Step Verification</strong> (if not already enabled).</li>
+                        <li>Go to <strong>App Passwords</strong> (or search &quot;App passwords&quot; at the top).</li>
+                        <li>Type &quot;ITPT Website&quot; as App Name and click <strong>Create</strong>.</li>
+                        <li>Copy the 16-letter code (e.g., <span className="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">xxxx xxxx xxxx xxxx</span>) and paste it into the SMTP Password field above.</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* GROUP 3: INSTANT DELIVERY & AUTOMATION */}
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+                    <h4 className="font-extrabold text-sm text-gray-900 flex items-center space-x-1.5">
+                      <Zap className="w-4 h-4 text-purple-600" />
+                      <span>3. Real-Time Delivery &amp; Webhook Triggers</span>
+                    </h4>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="instantEmailToggle"
+                        checked={emailSettingsForm.enableInstantEmail ?? true}
+                        onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, enableInstantEmail: e.target.checked })}
+                        className="rounded text-purple-600 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="instantEmailToggle" className="text-gray-800 font-bold cursor-pointer">
+                        Enable real-time instant email dispatch on every successful purchase
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-800 mb-1">
+                        Automated Sales Webhook URL (Slack, Discord, CRM, Zapier)
+                      </label>
+                      <input
+                        type="url"
+                        value={emailSettingsForm.webhookUrl || ''}
+                        onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, webhookUrl: e.target.value })}
+                        placeholder="https://hooks.slack.com/services/... or https://maker.ifttt.com/..."
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-mono text-[11px]"
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Optional webhook triggered simultaneously with every order for instant team chat alerts.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Test Email Feedback Result */}
+                  {testEmailResult && (
+                    <div
+                      className={`rounded-xl p-3 text-xs flex items-start space-x-2 ${
+                        testEmailResult.type === 'success'
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                          : 'bg-red-50 border border-red-200 text-red-900'
+                      }`}
+                    >
+                      {testEmailResult.type === 'success' ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      )}
+                      <div>{testEmailResult.text}</div>
+                    </div>
+                  )}
+
+                  {/* FORM ACTIONS */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={isSavingEmailSettings}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm transition flex items-center space-x-1.5 disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isSavingEmailSettings ? 'Saving Settings...' : 'Save All Notification Settings'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSendingTestEmail}
                       onClick={async () => {
                         setIsSendingTestEmail(true);
-                        const res = await dispatchTestAdminEmail();
+                        setTestEmailResult(null);
+
+                        // Save current form first so the test uses updated credentials
+                        await updateAdminEmailSettings(emailSettingsForm);
+
+                        const res = await dispatchTestAdminEmail(emailSettingsForm.primaryAdminEmail);
                         setIsSendingTestEmail(false);
-                        if (res) {
-                          setSuccessNotice(`✓ Diagnostic test email sent to ${emailSettingsForm.primaryAdminEmail}! Check the Admin Mailbox.`);
+
+                        if (res && res.success) {
+                          setTestEmailResult({
+                            type: 'success',
+                            text: `✓ Success! Diagnostic test email delivered to ${emailSettingsForm.primaryAdminEmail}. (MessageID: ${res.messageId || 'OK'})`
+                          });
+                          setSuccessNotice(`✓ Test email delivered to ${emailSettingsForm.primaryAdminEmail}! Check your inbox and the Admin Mailbox.`);
+                        } else {
+                          setTestEmailResult({
+                            type: 'error',
+                            text: `✕ Test failed: ${res?.error || 'Unable to connect to SMTP server. Verify your SMTP Username and App Password.'}`
+                          });
                         }
                       }}
-                      className="border border-purple-600 text-purple-700 hover:bg-purple-50 font-bold px-4 py-2.5 rounded-lg transition flex items-center space-x-1.5"
+                      className="border border-purple-600 text-purple-700 hover:bg-purple-50 font-bold px-4 py-2.5 rounded-lg transition flex items-center space-x-1.5 disabled:opacity-50"
                     >
-                      <Send className="w-4 h-4" />
-                      <span>Send Diagnostic Test Email</span>
+                      <Send className={`w-4 h-4 ${isSendingTestEmail ? 'animate-pulse text-purple-600' : ''}`} />
+                      <span>{isSendingTestEmail ? 'Testing SMTP Connection...' : 'Send Diagnostic Test Email'}</span>
                     </button>
                   </div>
                 </form>

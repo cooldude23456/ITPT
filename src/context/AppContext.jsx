@@ -971,10 +971,56 @@ export function AppProvider({ children }) {
     return inbox;
   });
 
-  const updateAdminEmailSettings = (newSettings) => {
+  const fetchAdminEmailSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/email-settings');
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setAdminEmailSettings(prev => ({ ...prev, ...data.settings }));
+        return data.settings;
+      }
+    } catch (e) {
+      console.warn('Could not fetch server email settings:', e);
+    }
+  };
+
+  const fetchAdminEmailLogs = async () => {
+    try {
+      const res = await fetch('/api/admin/email-logs');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.emails)) {
+        setAdminEmailInbox(data.emails);
+        return data.emails;
+      }
+    } catch (e) {
+      console.warn('Could not fetch server email logs:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminEmailSettings();
+    fetchAdminEmailLogs();
+  }, []);
+
+  const updateAdminEmailSettings = async (newSettings) => {
     if (!verifyAdminAuthorization('Update Email Notification Settings')) return false;
     const updated = saveAdminEmailSettings(newSettings);
-    setAdminEmailSettings(updated);
+    setAdminEmailSettings(prev => ({ ...prev, ...updated }));
+
+    try {
+      const res = await fetch('/api/admin/email-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings)
+      });
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setAdminEmailSettings(prev => ({ ...prev, ...data.settings }));
+      }
+    } catch (e) {
+      console.warn('Could not persist email settings to server:', e);
+    }
+
     addSecurityAuditLog({
       eventType: 'ADMIN_EMAIL_SETTINGS_UPDATED',
       severity: 'INFO',
@@ -988,53 +1034,64 @@ export function AppProvider({ children }) {
     if (!verifyAdminAuthorization('Resend Order Email')) return false;
     const order = orders.find(o => o.orderId === orderId);
     if (!order) return false;
-    const emailRecord = await dispatchAdminOrderNotificationEmail(order);
-    setAdminEmailInbox(getAdminEmailInbox());
-    addSecurityAuditLog({
-      eventType: 'ADMIN_EMAIL_RESENT',
-      severity: 'INFO',
-      actor: currentUser?.name || 'Administrator',
-      details: `Order notification email resent for order ${orderId} to ${adminEmailSettings.primaryAdminEmail}.`
-    });
-    return emailRecord;
+
+    try {
+      const res = await fetch('/api/admin/resend-order-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, order })
+      });
+      const data = await res.json();
+      await fetchAdminEmailLogs();
+
+      addSecurityAuditLog({
+        eventType: 'ADMIN_EMAIL_RESENT',
+        severity: 'INFO',
+        actor: currentUser?.name || 'Administrator',
+        details: `Order notification email resent for order ${orderId} to ${adminEmailSettings.primaryAdminEmail}.`
+      });
+      return data;
+    } catch (e) {
+      console.warn('Failed to resend order email via server:', e);
+      const emailRecord = await dispatchAdminOrderNotificationEmail(order);
+      setAdminEmailInbox(getAdminEmailInbox());
+      return emailRecord;
+    }
   };
 
-  const dispatchTestAdminEmail = async () => {
-    if (!verifyAdminAuthorization('Send Test Email')) return false;
-    const testOrder = {
-      orderId: `ITPT-TEST-${Date.now().toString().slice(-4)}`,
-      date: new Date().toISOString().split('T')[0],
-      customerName: 'Test Student (Simulation)',
-      customerEmail: 'student.test@itpracticetests.com',
-      customerPhone: '+91-9253330335',
-      items: [
-        {
-          id: products[0]?.id || 'test-prod-1',
-          title: products[0]?.title || 'AWS Solutions Architect Associate SAA-C03',
-          vendor: products[0]?.vendor || 'AWS',
-          priceINR: products[0]?.priceINR || 399,
-          priceUSD: products[0]?.priceUSD || 4.99
-        }
-      ],
-      currency: currency,
-      subtotal: currency === 'INR' ? 399 : 4.99,
-      discount: 0,
-      total: currency === 'INR' ? 399 : 4.99,
-      paymentMethod: 'Razorpay UPI (Live Test Handshake)',
-      paymentGateway: 'Razorpay',
-      transactionId: `TXN-SIM-${Date.now().toString().slice(-6)}`,
-      gstNumber: '03AKXPD3010G1ZM',
-      status: 'COMPLETED'
-    };
-    const emailRecord = await dispatchAdminOrderNotificationEmail(testOrder);
-    setAdminEmailInbox(getAdminEmailInbox());
-    addSecurityAuditLog({
-      eventType: 'TEST_ADMIN_EMAIL_DISPATCHED',
-      severity: 'INFO',
-      actor: currentUser?.name || 'Administrator',
-      details: `Diagnostic test email dispatched to ${adminEmailSettings.primaryAdminEmail}.`
-    });
-    return emailRecord;
+  const dispatchTestAdminEmail = async (targetRecipient) => {
+    if (!verifyAdminAuthorization('Send Test Email')) return { success: false, error: 'Unauthorized' };
+    const recipient = targetRecipient || adminEmailSettings.primaryAdminEmail || 'support@itpracticetests.com';
+
+    try {
+      const res = await fetch('/api/admin/send-test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient })
+      });
+      const data = await res.json();
+      await fetchAdminEmailLogs();
+
+      if (data.success) {
+        addSecurityAuditLog({
+          eventType: 'TEST_ADMIN_EMAIL_DISPATCHED',
+          severity: 'INFO',
+          actor: currentUser?.name || 'Administrator',
+          details: `Diagnostic test email successfully delivered via SMTP to ${recipient}. MessageId: ${data.messageId}`
+        });
+        return { success: true, message: data.message, messageId: data.messageId };
+      } else {
+        addSecurityAuditLog({
+          eventType: 'TEST_ADMIN_EMAIL_FAILED',
+          severity: 'WARNING',
+          actor: currentUser?.name || 'Administrator',
+          details: `Diagnostic test email failed: ${data.error}`
+        });
+        return { success: false, error: data.error };
+      }
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   };
 
   const [orders, setOrders] = useState(() => {
@@ -1957,6 +2014,8 @@ export function AppProvider({ children }) {
         adminEmailSettings,
         updateAdminEmailSettings,
         adminEmailInbox,
+        fetchAdminEmailLogs,
+        fetchAdminEmailSettings,
         resendAdminOrderEmail,
         dispatchTestAdminEmail,
         updateUserProfile,
