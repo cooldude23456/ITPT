@@ -41,8 +41,12 @@ import {
   deleteCouponFromSupabase,
   fetchGatewaysFromSupabase,
   saveGatewayToSupabase,
+  deleteGatewayFromSupabase,
   fetchAttemptsFromSupabase,
   saveAttemptToSupabase,
+  saveSecurityLogToSupabase,
+  fetchSecurityLogsFromSupabase,
+  fetchContactInquiriesFromSupabase,
   testSupabaseConnection,
   syncAllLocalDataToSupabase,
   createPendingOrderApi,
@@ -65,6 +69,16 @@ const initialUsers = [
     password: 'admin123',
     createdAt: '2026-01-01',
     avatar: '/6577847_169c.webp'
+  },
+  {
+    id: 'user-student-1',
+    name: 'Alex Kumar',
+    email: 'alex.kumar@example.com',
+    role: 'student',
+    phone: '+91-9876543210',
+    password: 'student123',
+    createdAt: '2026-10-01',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=face'
   },
   {
     id: 'user-student-2',
@@ -124,7 +138,7 @@ const initialGateways = [
     isTestMode: false,
     clientId: '',
     clientSecret: '',
-    merchantEmail: 'rath.sanjiv.rath@gmail.com',
+    merchantEmail: '',
     paypalMe: 'ITPracticeTests',
     environment: 'PRODUCTION',
     supportedMethods: ['PayPal Account', 'International Credit Cards'],
@@ -206,8 +220,13 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem('itpt_users');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(u => u.email !== 'alex.kumar@example.com');
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map();
+          initialUsers.forEach(u => map.set(u.email.toLowerCase(), u));
+          parsed.forEach(u => {
+            if (u && u.email) map.set(u.email.toLowerCase(), u);
+          });
+          return Array.from(map.values());
         }
       }
       return initialUsers;
@@ -226,12 +245,9 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem('itpt_current_user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Clean out any legacy demo session for alex.kumar
-        if (parsed?.email === 'alex.kumar@example.com') {
-          localStorage.removeItem('itpt_current_user');
-          return null;
+        if (parsed && parsed.email) {
+          return parsed;
         }
-        return parsed;
       }
       return null;
     } catch (e) {
@@ -334,6 +350,17 @@ export function AppProvider({ children }) {
     setCurrentUser(null);
   };
 
+  const updateUserProfile = (updatedData) => {
+    if (!currentUser) return false;
+    const merged = { ...currentUser, ...updatedData };
+    setCurrentUser(merged);
+    setUsers(prev => prev.map(u => u.id === merged.id ? merged : u));
+    saveUserToSupabase(merged).catch(err =>
+      console.warn('[Supabase Sync User Profile Error]:', err)
+    );
+    return true;
+  };
+
   // 4. Payment Gateways State
   const [paymentGateways, setPaymentGateways] = useState(() => {
     try {
@@ -419,27 +446,37 @@ export function AppProvider({ children }) {
     return newGw;
   };
 
-  const updatePaymentGateway = (id, data) => {
+  const updatePaymentGateway = async (id, data) => {
     if (!verifyAdminAuthorization('Update Payment Gateway')) return false;
 
-    setPaymentGateways(prev =>
-      prev.map(gw => {
+    let updatedGw = null;
+    setPaymentGateways(prev => {
+      const updatedList = prev.map(gw => {
         if (gw.id === id) {
-          const updated = { ...gw, ...data };
-          saveGatewayToSupabase(updated).catch(err =>
-            console.warn('[Supabase Sync Gateway Error]:', err)
-          );
-          return updated;
+          updatedGw = { ...gw, ...data };
+          return updatedGw;
         }
         return gw;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('itpt_payment_gateways', JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('LocalStorage error:', e);
+      }
+      return updatedList;
+    });
+
+    if (updatedGw) {
+      await saveGatewayToSupabase(updatedGw).catch(err =>
+        console.warn('[Supabase Sync Gateway Error]:', err)
+      );
+    }
 
     addSecurityAuditLog({
       eventType: 'GATEWAY_UPDATED',
       severity: 'INFO',
       actor: currentUser?.name || 'Administrator',
-      details: `Updated cryptographic settings for gateway ID: ${id}.`
+      details: `Updated settings and credentials for payment gateway: ${updatedGw?.name || id}.`
     });
     return true;
   };
@@ -474,6 +511,9 @@ export function AppProvider({ children }) {
 
     const target = paymentGateways.find(gw => gw.id === id);
     setPaymentGateways(prev => prev.filter(gw => gw.id !== id));
+    deleteGatewayFromSupabase(id).catch(err =>
+      console.warn('[Supabase Sync Gateway Delete Error]:', err)
+    );
     addSecurityAuditLog({
       eventType: 'GATEWAY_DELETED',
       severity: 'WARNING',
@@ -521,6 +561,9 @@ export function AppProvider({ children }) {
       ...logEntry
     };
     setSecurityAuditLogs(prev => [entry, ...prev.slice(0, 49)]); // keep last 50
+    saveSecurityLogToSupabase(entry).catch(err =>
+      console.warn('[Supabase Sync Security Log Error]:', err)
+    );
   };
 
   // 6. Cart State
@@ -1108,7 +1151,12 @@ export function AppProvider({ children }) {
         details: `Order ${finalizedOrder.orderId} successfully verified server-side with gateway! Transaction: ${res.transactionId}. Course access UNLOCKED.`
       });
 
-      return { success: true, order: finalizedOrder, enrolledProductIds: res.enrolledProductIds };
+      return {
+        success: true,
+        status: 'PAID',
+        order: finalizedOrder,
+        enrolledProductIds: res.enrolledProductIds
+      };
     }
 
     addSecurityAuditLog({
@@ -1674,6 +1722,7 @@ export function AppProvider({ children }) {
   };
 
   // 16. Supabase Backend Live Sync Engine
+  const [contactInquiries, setContactInquiries] = useState([]);
   const [supabaseStatus, setSupabaseStatus] = useState({
     checked: false,
     connected: false,
@@ -1739,7 +1788,17 @@ export function AppProvider({ children }) {
           // 5. Fetch live users
           const liveUsers = await fetchUsersFromSupabase();
           if (liveUsers && liveUsers.length > 0 && isMounted) {
-            setUsers(liveUsers);
+            setUsers(prev => {
+              const map = new Map();
+              initialUsers.forEach(u => map.set(u.email.toLowerCase(), u));
+              prev.forEach(u => {
+                if (u && u.email) map.set(u.email.toLowerCase(), u);
+              });
+              liveUsers.forEach(u => {
+                if (u && u.email) map.set(u.email.toLowerCase(), u);
+              });
+              return Array.from(map.values());
+            });
           }
 
           // 6. Fetch live custom question banks
@@ -1757,13 +1816,37 @@ export function AppProvider({ children }) {
           // 8. Fetch live payment gateways
           const liveGateways = await fetchGatewaysFromSupabase();
           if (liveGateways && liveGateways.length > 0 && isMounted) {
-            setPaymentGateways(liveGateways);
+            setPaymentGateways(prev => {
+              const map = new Map();
+              initialGateways.forEach(g => map.set(g.id, g));
+              prev.forEach(g => {
+                const existing = map.get(g.id) || {};
+                map.set(g.id, { ...existing, ...g });
+              });
+              liveGateways.forEach(g => {
+                const existing = map.get(g.id) || {};
+                map.set(g.id, { ...existing, ...g });
+              });
+              return Array.from(map.values());
+            });
           }
 
           // 9. Fetch live test attempts
           const liveAttempts = await fetchAttemptsFromSupabase();
           if (liveAttempts && liveAttempts.length > 0 && isMounted) {
             setTestAttempts(liveAttempts);
+          }
+
+          // 10. Fetch live security audit logs
+          const liveLogs = await fetchSecurityLogsFromSupabase(50);
+          if (liveLogs && liveLogs.length > 0 && isMounted) {
+            setSecurityAuditLogs(liveLogs);
+          }
+
+          // 11. Fetch live contact inquiries
+          const liveInquiries = await fetchContactInquiriesFromSupabase();
+          if (liveInquiries && liveInquiries.length > 0 && isMounted) {
+            setContactInquiries(liveInquiries);
           }
         }
       } catch (err) {
@@ -1876,6 +1959,8 @@ export function AppProvider({ children }) {
         adminEmailInbox,
         resendAdminOrderEmail,
         dispatchTestAdminEmail,
+        updateUserProfile,
+        contactInquiries,
         supabaseStatus,
         refreshSupabaseStatus,
         syncAllLocalDataToSupabase: handleBulkSyncToSupabase,

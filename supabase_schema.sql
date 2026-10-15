@@ -139,10 +139,21 @@ CREATE TABLE IF NOT EXISTS public.payment_gateways (
     name TEXT NOT NULL,
     provider TEXT,
     key_id TEXT,
+    client_id TEXT,
+    key_secret TEXT,
+    client_secret TEXT,
     webhook_secret TEXT,
+    merchant_email TEXT,
+    merchant_name TEXT,
+    upi_vpa TEXT,
+    paypal_me TEXT,
+    currency TEXT DEFAULT 'INR',
+    environment TEXT DEFAULT 'PRODUCTION',
+    payment_link TEXT,
     is_enabled BOOLEAN DEFAULT TRUE,
-    is_test_mode BOOLEAN DEFAULT TRUE,
+    is_test_mode BOOLEAN DEFAULT FALSE,
     supported_methods JSONB DEFAULT '["UPI", "Credit/Debit Cards", "NetBanking"]'::jsonb,
+    extra_config JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -173,9 +184,36 @@ CREATE TABLE IF NOT EXISTS public.enrollments (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Safe migration for existing enrollments table:
+-- 11. CONTACT & ENTERPRISE INQUIRIES TABLE
+CREATE TABLE IF NOT EXISTS public.contact_inquiries (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    subject TEXT,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'NEW',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. SECURITY AUDIT LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.security_audit_logs (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    severity TEXT DEFAULT 'INFO',
+    actor TEXT,
+    details TEXT,
+    ip_address TEXT,
+    timestamp TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Safe migration for existing tables:
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDING';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS gateway_order_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS signature TEXT;
 ALTER TABLE public.enrollments ADD COLUMN IF NOT EXISTS order_id TEXT;
 ALTER TABLE public.enrollments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE public.payment_gateways ADD COLUMN IF NOT EXISTS payment_link TEXT;
 
 -- ==============================================================================
 -- ENABLE ROW LEVEL SECURITY (RLS) & SET PERMISSIVE ACCESS POLICIES
@@ -190,6 +228,8 @@ ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_gateways ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.test_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contact_inquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.security_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read/write via Publishable/Anon key for seamless web operations:
 DROP POLICY IF EXISTS "Public Full Access on products" ON public.products;
@@ -222,9 +262,17 @@ CREATE POLICY "Public Full Access on test_attempts" ON public.test_attempts FOR 
 DROP POLICY IF EXISTS "Public Full Access on enrollments" ON public.enrollments;
 CREATE POLICY "Public Full Access on enrollments" ON public.enrollments FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public Full Access on contact_inquiries" ON public.contact_inquiries;
+CREATE POLICY "Public Full Access on contact_inquiries" ON public.contact_inquiries FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Full Access on security_audit_logs" ON public.security_audit_logs;
+CREATE POLICY "Public Full Access on security_audit_logs" ON public.security_audit_logs FOR ALL USING (true) WITH CHECK (true);
+
 -- Indexes for lightning fast queries:
 CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON public.reviews (product_id);
 CREATE INDEX IF NOT EXISTS idx_blogs_slug ON public.blogs (slug);
 CREATE INDEX IF NOT EXISTS idx_question_banks_pid ON public.custom_question_banks (product_id);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON public.orders (customer_email);
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users_profiles (email);
+CREATE INDEX IF NOT EXISTS idx_contact_inquiries_email ON public.contact_inquiries (email);
+CREATE INDEX IF NOT EXISTS idx_security_audit_logs_timestamp ON public.security_audit_logs (created_at DESC);

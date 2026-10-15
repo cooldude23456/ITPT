@@ -1,5 +1,5 @@
 import express from 'express';
-import { findCanonicalProduct, isCourseFree } from '../catalog.js';
+import { findCanonicalProduct, findProductOrCustom, isCourseFree } from '../catalog.js';
 import { checkAccess, getEnrolledCourseIds } from '../db.js';
 
 const router = express.Router();
@@ -33,7 +33,7 @@ router.post('/access/verify', async (req, res) => {
       });
     }
 
-    const product = findCanonicalProduct(productId);
+    const product = await findProductOrCustom(productId);
     if (product && isCourseFree(product)) {
       return res.status(200).json({
         hasAccess: true,

@@ -346,30 +346,32 @@ export default function AdminPanelPage({ onSelectProduct }) {
     showNotification(`Payment Gateway "${gatewayForm.name}" added and enabled!`);
   };
 
-  const handleEditGatewaySubmit = (e) => {
+  const handleEditGatewaySubmit = async (e) => {
     e.preventDefault();
     if (!editingGateway) return;
 
     const updatedData = {
+      ...editingGateway,
       name: editGatewayForm.name,
       provider: editGatewayForm.provider,
-      keyId: editGatewayForm.keyId || editGatewayForm.clientId,
-      clientId: editGatewayForm.clientId || editGatewayForm.keyId,
-      keySecret: editGatewayForm.keySecret || editGatewayForm.clientSecret,
-      clientSecret: editGatewayForm.clientSecret || editGatewayForm.keySecret,
-      merchantEmail: editGatewayForm.merchantEmail,
-      paypalMe: editGatewayForm.paypalMe,
-      upiVpa: editGatewayForm.upiVpa,
-      merchantName: editGatewayForm.merchantName,
-      webhookSecret: editGatewayForm.webhookSecret,
+      keyId: editGatewayForm.keyId || editGatewayForm.clientId || '',
+      clientId: editGatewayForm.clientId || editGatewayForm.keyId || '',
+      keySecret: editGatewayForm.keySecret || editGatewayForm.clientSecret || '',
+      clientSecret: editGatewayForm.clientSecret || editGatewayForm.keySecret || '',
+      merchantEmail: editGatewayForm.merchantEmail || '',
+      paypalMe: editGatewayForm.paypalMe || '',
+      upiVpa: editGatewayForm.upiVpa || '',
+      merchantName: editGatewayForm.merchantName || '',
+      webhookSecret: editGatewayForm.webhookSecret || '',
       currency: editGatewayForm.currency,
       environment: editGatewayForm.environment,
       isTestMode: editGatewayForm.isTestMode,
-      paymentLink: editGatewayForm.paymentLink,
+      paymentLink: editGatewayForm.paymentLink || '',
+      supportedMethods: editGatewayForm.supportedMethods || editingGateway.supportedMethods || ['Credit/Debit Cards', 'UPI', 'NetBanking'],
       isEnabled: editGatewayForm.isEnabled
     };
 
-    updatePaymentGateway(editingGateway.id, updatedData);
+    await updatePaymentGateway(editingGateway.id, updatedData);
     setShowEditGatewayModal(false);
     setEditingGateway(null);
     showNotification(`Payment Gateway "${editGatewayForm.name}" updated successfully!`);
@@ -1213,15 +1215,16 @@ export default function AdminPanelPage({ onSelectProduct }) {
                             clientId: gw.clientId || gw.keyId || '',
                             keySecret: gw.keySecret || gw.clientSecret || '',
                             clientSecret: gw.clientSecret || gw.keySecret || '',
-                            merchantEmail: gw.merchantEmail || 'rath.sanjiv.rath@gmail.com',
-                            paypalMe: gw.paypalMe || 'ITPracticeTests',
-                            upiVpa: gw.upiVpa || 'itpracticetests@okhdfcbank',
-                            merchantName: gw.merchantName || 'ITPracticeTests Online Education',
-                            webhookSecret: gw.webhookSecret || '',
+                            merchantEmail: gw.merchantEmail !== undefined && gw.merchantEmail !== null ? gw.merchantEmail : (gw.merchant_email || ''),
+                            paypalMe: gw.paypalMe !== undefined && gw.paypalMe !== null ? gw.paypalMe : (gw.paypal_me || ''),
+                            upiVpa: gw.upiVpa !== undefined && gw.upiVpa !== null ? gw.upiVpa : (gw.upi_vpa || ''),
+                            merchantName: gw.merchantName !== undefined && gw.merchantName !== null ? gw.merchantName : (gw.merchant_name || ''),
+                            webhookSecret: gw.webhookSecret || gw.webhook_secret || '',
                             currency: gw.currency || (gw.provider === 'PayPal' ? 'USD' : 'INR'),
                             environment: gw.environment || (gw.isTestMode ? 'SANDBOX' : 'PRODUCTION'),
                             isTestMode: gw.isTestMode ?? false,
                             paymentLink: gw.paymentLink || gw.payment_link || '',
+                            supportedMethods: Array.isArray(gw.supportedMethods) ? [...gw.supportedMethods] : ['Credit/Debit Cards', 'UPI', 'NetBanking'],
                             isEnabled: gw.isEnabled ?? true
                           });
                           setShowEditGatewayModal(true);
@@ -3326,6 +3329,43 @@ export default function AdminPanelPage({ onSelectProduct }) {
                     <option value="SANDBOX">Sandbox Test Environment</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Supported Payment Channels */}
+              <div className="pt-1 space-y-1.5">
+                <label className="block font-bold text-gray-700">Supported Payment Channels</label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {['Credit/Debit Cards', 'UPI', 'NetBanking', 'Wallets / PayPal'].map((method) => {
+                    const currentMethods = editGatewayForm.supportedMethods || [];
+                    const isChecked = currentMethods.includes(method) ||
+                      (method === 'NetBanking' && currentMethods.some(m => m.toLowerCase().includes('netbanking'))) ||
+                      (method === 'UPI' && currentMethods.some(m => m.toLowerCase().includes('upi'))) ||
+                      (method === 'Credit/Debit Cards' && currentMethods.some(m => m.toLowerCase().includes('card')));
+
+                    return (
+                      <label key={method} className="flex items-center space-x-2 p-2 bg-[#f7f9fa] border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            let updated = [...currentMethods];
+                            if (e.target.checked) {
+                              if (!updated.includes(method)) updated.push(method);
+                            } else {
+                              updated = updated.filter(m => m !== method && !m.toLowerCase().includes(method.toLowerCase().split(' ')[0]));
+                            }
+                            setEditGatewayForm({ ...editGatewayForm, supportedMethods: updated });
+                          }}
+                          className="rounded text-purple-600"
+                        />
+                        <span className="font-semibold text-slate-800">{method}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] text-gray-500 block">
+                  Toggle which payment options appear on checkout for this gateway.
+                </span>
               </div>
 
               <div className="flex items-center space-x-2 pt-1">

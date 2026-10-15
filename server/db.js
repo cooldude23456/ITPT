@@ -30,6 +30,28 @@ async function supabaseFetch(endpoint, options = {}) {
   }
 }
 
+export { supabaseFetch };
+
+// ---------------- PRODUCTS ----------------
+export async function getProductById(productId) {
+  if (!productId) return null;
+  const res = await supabaseFetch(`products?id=eq.${encodeURIComponent(productId)}&limit=1`);
+  if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+    const row = res.data[0];
+    return {
+      id: row.id,
+      title: row.title,
+      vendor: row.vendor || 'ITPracticeTests Certified',
+      category: row.category || 'Certification Practice Tests',
+      priceINR: Number(row.price_inr ?? row.priceINR ?? 0),
+      priceUSD: Number(row.price_usd ?? row.priceUSD ?? 0),
+      isFree: Boolean(row.is_free || row.isFree || (row.price_inr === 0 && row.price_usd === 0))
+    };
+  }
+  return null;
+}
+
+
 // ---------------- PAYMENT GATEWAYS ----------------
 export async function getActiveGateways() {
   const res = await supabaseFetch('payment_gateways?select=*');
@@ -77,9 +99,12 @@ export async function insertPendingOrder(order) {
     subtotal: Number(order.subtotal || 0),
     discount: Number(order.discount || 0),
     total: Number(order.total || 0),
+    status: 'PENDING',
     payment_method: order.paymentMethod || 'PENDING',
     payment_gateway: order.paymentGateway || 'Razorpay',
     transaction_id: order.transactionId || 'PENDING_INIT',
+    gateway_order_id: order.gatewayOrderId || null,
+    signature: order.signature || null,
     admin_notification_sent: false,
     admin_notification_recipient: 'support@itpracticetests.com'
   };
@@ -101,7 +126,8 @@ export async function getOrder(orderId) {
   const res = await supabaseFetch(`orders?order_id=eq.${encodeURIComponent(orderId)}&limit=1`);
   if (res.ok && res.data && res.data.length > 0) {
     const row = res.data[0];
-    const isPaid = row.payment_method?.includes('Verified') ||
+    const isPaid = row.status === 'PAID' ||
+                   row.payment_method?.includes('Verified') ||
                    (row.transaction_id && !row.transaction_id.startsWith('PENDING_'));
     const order = {
       orderId: row.order_id || row.id,
@@ -116,7 +142,9 @@ export async function getOrder(orderId) {
       paymentMethod: row.payment_method,
       paymentGateway: row.payment_gateway,
       transactionId: row.transaction_id,
-      status: isPaid ? 'PAID' : 'PENDING',
+      status: isPaid ? 'PAID' : (row.status || 'PENDING'),
+      signature: row.signature,
+      gatewayOrderId: row.gateway_order_id,
       date: row.date,
       createdAt: row.created_at
     };
@@ -137,7 +165,7 @@ export async function markOrderAsPaid({ orderId, transactionId, paymentMethod, p
     paymentGateway: paymentGateway || existing?.paymentGateway || 'Razorpay',
     status: 'PAID',
     paidAt: new Date().toISOString(),
-    signature
+    signature: signature || existing?.signature || null
   };
 
   // Update memory
@@ -149,6 +177,8 @@ export async function markOrderAsPaid({ orderId, transactionId, paymentMethod, p
     body: JSON.stringify({
       transaction_id: transactionId,
       payment_method: updated.paymentMethod,
+      status: 'PAID',
+      signature: updated.signature,
       admin_notification_sent: true
     })
   });
@@ -165,7 +195,9 @@ export async function grantEnrollment({ userEmail, productId, orderId }) {
   const payload = {
     id: `enr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     user_email: email,
-    product_id: productId
+    product_id: productId,
+    order_id: orderId || null,
+    status: 'ACTIVE'
   };
 
   const res = await supabaseFetch('enrollments', {
@@ -174,6 +206,26 @@ export async function grantEnrollment({ userEmail, productId, orderId }) {
   });
 
   return { success: true, email, productId };
+}
+
+// ---------------- SECURITY AUDIT LOGS ----------------
+export async function recordSecurityAuditLog({ eventType, severity = 'INFO', actor = 'Server', details = '', ipAddress = '127.0.0.1' }) {
+  const payload = {
+    id: `sec_srv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    event_type: eventType,
+    severity,
+    actor,
+    details,
+    ip_address: ipAddress,
+    timestamp: new Date().toISOString()
+  };
+
+  await supabaseFetch('security_audit_logs', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
+  return payload;
 }
 
 export async function checkAccess({ email, productId }) {

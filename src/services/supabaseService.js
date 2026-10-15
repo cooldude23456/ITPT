@@ -579,7 +579,8 @@ export async function fetchGatewaysFromSupabase() {
   try {
     const { data, error } = await supabase
       .from('payment_gateways')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
     if (data && data.length > 0) {
@@ -587,12 +588,22 @@ export async function fetchGatewaysFromSupabase() {
         id: g.id,
         name: g.name,
         provider: g.provider,
-        keyId: g.key_id,
-        webhookSecret: g.webhook_secret,
-        isEnabled: Boolean(g.is_enabled),
-        isTestMode: Boolean(g.is_test_mode),
-        paymentLink: g.payment_link || g.paymentLink || '',
-        supportedMethods: Array.isArray(g.supported_methods) ? g.supported_methods : []
+        keyId: g.key_id || g.client_id || '',
+        clientId: g.client_id || g.key_id || '',
+        keySecret: g.key_secret || g.client_secret || '',
+        clientSecret: g.client_secret || g.key_secret || '',
+        webhookSecret: g.webhook_secret || '',
+        merchantEmail: g.merchant_email !== undefined && g.merchant_email !== null ? g.merchant_email : '',
+        merchantName: g.merchant_name || '',
+        upiVpa: g.upi_vpa || '',
+        paypalMe: g.paypal_me || '',
+        currency: g.currency || (g.provider === 'PayPal' ? 'USD' : 'INR'),
+        environment: g.environment || (g.is_test_mode ? 'SANDBOX' : 'PRODUCTION'),
+        isEnabled: Boolean(g.is_enabled ?? true),
+        isTestMode: Boolean(g.is_test_mode ?? false),
+        paymentLink: g.payment_link || '',
+        supportedMethods: Array.isArray(g.supported_methods) ? g.supported_methods : [],
+        ...(g.extra_config || {})
       }));
     }
     return null;
@@ -608,12 +619,30 @@ export async function saveGatewayToSupabase(gw) {
       id: gw.id,
       name: gw.name,
       provider: gw.provider,
-      key_id: gw.keyId,
-      webhook_secret: gw.webhookSecret,
+      key_id: gw.keyId || gw.clientId || '',
+      client_id: gw.clientId || gw.keyId || '',
+      key_secret: gw.keySecret || gw.clientSecret || '',
+      client_secret: gw.clientSecret || gw.keySecret || '',
+      webhook_secret: gw.webhookSecret || '',
+      merchant_email: gw.merchantEmail !== undefined && gw.merchantEmail !== null ? gw.merchantEmail : '',
+      merchant_name: gw.merchantName || '',
+      upi_vpa: gw.upiVpa || '',
+      paypal_me: gw.paypalMe || '',
+      currency: gw.currency || (gw.provider === 'PayPal' ? 'USD' : 'INR'),
+      environment: gw.environment || (gw.isTestMode ? 'SANDBOX' : 'PRODUCTION'),
       payment_link: gw.paymentLink || gw.payment_link || '',
       is_enabled: Boolean(gw.isEnabled ?? true),
-      is_test_mode: Boolean(gw.isTestMode ?? true),
-      supported_methods: Array.isArray(gw.supportedMethods) ? gw.supportedMethods : []
+      is_test_mode: Boolean(gw.isTestMode ?? false),
+      supported_methods: Array.isArray(gw.supportedMethods) ? gw.supportedMethods : ['UPI', 'Credit/Debit Cards', 'NetBanking'],
+      extra_config: {
+        ...(gw.merchantKey ? { merchantKey: gw.merchantKey } : {}),
+        ...(gw.merchantSalt ? { merchantSalt: gw.merchantSalt } : {}),
+        ...(gw.merchantId ? { merchantId: gw.merchantId } : {}),
+        ...(gw.accessCode ? { accessCode: gw.accessCode } : {}),
+        ...(gw.workingKey ? { workingKey: gw.workingKey } : {}),
+        ...(gw.appId ? { appId: gw.appId } : {}),
+        ...(gw.secretKey ? { secretKey: gw.secretKey } : {})
+      }
     };
     const { error } = await supabase
       .from('payment_gateways')
@@ -624,6 +653,118 @@ export async function saveGatewayToSupabase(gw) {
   } catch (err) {
     console.warn('[Supabase] Failed to save gateway:', err.message);
     return { success: false, error: err.message };
+  }
+}
+
+export async function deleteGatewayFromSupabase(gatewayId) {
+  try {
+    const { error } = await supabase
+      .from('payment_gateways')
+      .delete()
+      .eq('id', gatewayId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.warn('[Supabase] Failed to delete gateway:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// ---------------- CONTACT INQUIRIES ----------------
+
+export async function saveContactInquiryToSupabase(inquiry) {
+  try {
+    const payload = {
+      id: inquiry.id || `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: inquiry.name,
+      email: (inquiry.email || '').toLowerCase().trim(),
+      subject: inquiry.subject || 'Certification Exam Inquiry',
+      message: inquiry.message,
+      status: 'NEW',
+      created_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (err) {
+    console.warn('[Supabase] Failed to save contact inquiry:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchContactInquiriesFromSupabase() {
+  try {
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('[Supabase] Failed to fetch contact inquiries:', err.message);
+    return [];
+  }
+}
+
+// ---------------- SECURITY AUDIT LOGS ----------------
+
+export async function saveSecurityLogToSupabase(log) {
+  try {
+    const payload = {
+      id: log.id || `sec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      event_type: log.eventType || 'SYSTEM_EVENT',
+      severity: log.severity || 'INFO',
+      actor: log.actor || 'System',
+      details: log.details || '',
+      ip_address: log.ipAddress || 'Client',
+      timestamp: log.timestamp || new Date().toISOString(),
+      created_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('security_audit_logs')
+      .insert(payload);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.warn('[Supabase] Failed to save security audit log:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchSecurityLogsFromSupabase(limit = 100) {
+  try {
+    const { data, error } = await supabase
+      .from('security_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    if (data && data.length > 0) {
+      return data.map(l => ({
+        id: l.id,
+        eventType: l.event_type,
+        severity: l.severity,
+        actor: l.actor,
+        details: l.details,
+        ipAddress: l.ip_address,
+        timestamp: l.timestamp || l.created_at
+      }));
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Supabase] Failed to fetch security logs:', err.message);
+    return null;
   }
 }
 
@@ -740,11 +881,30 @@ export async function syncAllLocalDataToSupabase({ products, blogs, coupons, gat
         id: g.id,
         name: g.name,
         provider: g.provider,
-        key_id: g.keyId,
-        webhook_secret: g.webhookSecret,
+        key_id: g.keyId || g.clientId || '',
+        client_id: g.clientId || g.keyId || '',
+        key_secret: g.keySecret || g.clientSecret || '',
+        client_secret: g.clientSecret || g.keySecret || '',
+        webhook_secret: g.webhookSecret || '',
+        merchant_email: g.merchantEmail !== undefined && g.merchantEmail !== null ? g.merchantEmail : '',
+        merchant_name: g.merchantName || '',
+        upi_vpa: g.upiVpa || '',
+        paypal_me: g.paypalMe || '',
+        currency: g.currency || (g.provider === 'PayPal' ? 'USD' : 'INR'),
+        environment: g.environment || (g.isTestMode ? 'SANDBOX' : 'PRODUCTION'),
+        payment_link: g.paymentLink || g.payment_link || '',
         is_enabled: Boolean(g.isEnabled ?? true),
-        is_test_mode: Boolean(g.isTestMode ?? true),
-        supported_methods: Array.isArray(g.supportedMethods) ? g.supportedMethods : []
+        is_test_mode: Boolean(g.isTestMode ?? false),
+        supported_methods: Array.isArray(g.supportedMethods) ? g.supportedMethods : ['UPI', 'Credit/Debit Cards', 'NetBanking'],
+        extra_config: {
+          ...(g.merchantKey ? { merchantKey: g.merchantKey } : {}),
+          ...(g.merchantSalt ? { merchantSalt: g.merchantSalt } : {}),
+          ...(g.merchantId ? { merchantId: g.merchantId } : {}),
+          ...(g.accessCode ? { accessCode: g.accessCode } : {}),
+          ...(g.workingKey ? { workingKey: g.workingKey } : {}),
+          ...(g.appId ? { appId: g.appId } : {}),
+          ...(g.secretKey ? { secretKey: g.secretKey } : {})
+        }
       }));
       const { error } = await supabase.from('payment_gateways').upsert(mapped, { onConflict: 'id' });
       if (error) results.errors.push(`Gateways: ${error.message}`);

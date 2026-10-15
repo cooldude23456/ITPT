@@ -67,9 +67,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   // Update contact info when currentUser changes
   useEffect(() => {
     if (currentUser) {
-      if (!customerName) setCustomerName(currentUser.name || '');
-      if (!customerEmail) setCustomerEmail(currentUser.email || '');
-      if (!customerPhone && currentUser.phone) setCustomerPhone(currentUser.phone);
+      setCustomerName(currentUser.name || '');
+      setCustomerEmail(currentUser.email || '');
+      if (currentUser.phone) setCustomerPhone(currentUser.phone);
     }
   }, [currentUser]);
 
@@ -398,6 +398,17 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       setIsProcessing(false);
       setVerificationStage('');
       setPaymentError(orderRes.error || 'Failed to initialize pending order on server.');
+      const errEl = document.getElementById('checkout-payment-error');
+      if (errEl) errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // Auto-complete free orders (e.g. 100% coupon or 0 INR courses)
+    if (orderRes.status === 'PAID' || orderRes.isFree) {
+      setIsProcessing(false);
+      setVerificationStage('');
+      setCompletedOrder(orderRes.order || orderRes);
+      setCheckoutStep('success');
       return;
     }
 
@@ -405,23 +416,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     setIsProcessing(false);
     setVerificationStage('');
 
-    // 3. Step 2: Check if Gateway or Course has an official direct Payment Link
-    const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
-    const coursePaymentLink = cart[0]?.paymentLink || cart[0]?.paymentLinks?.[provider.toLowerCase()];
-    const directLink = gwPaymentLink || coursePaymentLink;
-
-    if (directLink && directLink.trim().startsWith('http')) {
-      setActivePaymentLink(directLink.trim());
-      setShowPaymentLinkModal(true);
-      try {
-        window.open(directLink.trim(), '_blank', 'noopener,noreferrer');
-      } catch (e) {
-        console.warn('Popup blocked, modal fallback displayed');
-      }
-      return;
-    }
-
-    // 4. Step 3: Open Official Modal for Selected Payment Gateway
+    // Open Official Modal for Selected Payment Gateway
     if (provider === 'Razorpay' || provider.toLowerCase().includes('razorpay')) {
       await launchRazorpayModal(orderRes, finalEmail);
     } else if (provider === 'PayPal') {
@@ -435,7 +430,15 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     } else if (provider === 'UPI Direct' || provider.toLowerCase().includes('upi')) {
       setShowUpiModal(true);
     } else {
-      await launchRazorpayModal(orderRes, finalEmail);
+      const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
+      const coursePaymentLink = cart[0]?.paymentLink || cart[0]?.paymentLinks?.[provider.toLowerCase()];
+      const directLink = gwPaymentLink || coursePaymentLink;
+      if (directLink && directLink.trim().startsWith('http')) {
+        setActivePaymentLink(directLink.trim());
+        setShowPaymentLinkModal(true);
+      } else {
+        await launchRazorpayModal(orderRes, finalEmail);
+      }
     }
   };
 
@@ -461,7 +464,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
     setIsVerifyingRef(false);
 
-    if (verifyRes.success && verifyRes.status === 'PAID') {
+    if (verifyRes.success && (verifyRes.order?.status === 'PAID' || verifyRes.status === 'PAID')) {
       setShowPaymentLinkModal(false);
       setCompletedOrder(verifyRes.order);
       setCheckoutStep('success');
@@ -471,7 +474,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   };
 
   // Launch Razorpay Official Modal
-  const launchRazorpayModal = async (orderRes, finalEmail) => {
+  const launchRazorpayModal = async (orderRes, finalEmail, preferredMethod = null) => {
     setShowRazorpayLoadingModal(true);
 
     if (!window.Razorpay) {
@@ -486,6 +489,16 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     const finalAmount = orderRes.currency === 'INR' ? orderRes.total : Math.round(orderRes.total * 86);
     const razorpayKey = orderRes.gateway?.keyId || selectedGateway?.keyId || 'rzp_live_SylljWgo1cubKX';
 
+    const prefillData = {
+      name: customerName.trim() || 'Valued Learner',
+      email: finalEmail,
+      contact: customerPhone || '+91-9253330335'
+    };
+
+    if (preferredMethod) {
+      prefillData.method = preferredMethod;
+    }
+
     const options = {
       key: razorpayKey,
       amount: finalAmount * 100, // paise
@@ -493,14 +506,10 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       name: 'ITPracticeTests Online Education',
       description: `Enrollment: ${cart.map(c => c.title.split('|')[0]).join(', ')}`,
       image: 'https://api.dicebear.com/7.x/identicon/svg?seed=ITPracticeTests',
-      prefill: {
-        name: customerName.trim() || 'Valued Learner',
-        email: finalEmail,
-        contact: customerPhone || '+91-9253330335'
-      },
+      prefill: prefillData,
       theme: { color: '#7c3aed' },
       handler: async function (response) {
-        // ONLY CALLED ON SUCCESSFUL PAYMENT BY RAZORPAY
+        // ONLY CALLED ON SUCCESSFUL PAYMENT CONFIRMED BY RAZORPAY / BANK
         setShowRazorpayLoadingModal(false);
         setIsProcessing(true);
         setVerificationStage('Verifying cryptographic HMAC signature with security server...');
@@ -528,7 +537,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
           setShowRazorpayLoadingModal(false);
           setIsProcessing(false);
           setVerificationStage('');
-          setPaymentError('Razorpay payment modal was dismissed or closed. No payment was deducted and course access was NOT granted.');
+          setPaymentError('Payment window was closed before completion. No payment was deducted and course access was NOT granted.');
         }
       }
     };
@@ -551,81 +560,156 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     }
   };
 
-  // Handle Cashfree Modal Submit
+  // Handle Cashfree Modal Submit (Seamlessly connects to verified payment gateway / payment link)
   const handleCashfreeModalSubmit = async () => {
     setShowCashfreeModal(false);
+
+    // 1. If official payment link is configured, open official gateway window
+    const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
+    const directLink = gwPaymentLink || cart[0]?.paymentLink || cart[0]?.paymentLinks?.cashfree;
+
+    if (directLink && directLink.trim().startsWith('http')) {
+      setActivePaymentLink(directLink.trim());
+      setShowPaymentLinkModal(true);
+      window.open(directLink.trim(), '_blank');
+      return;
+    }
+
+    // 2. Seamlessly route NetBanking, Cards, or UPI through Razorpay live gateway
+    // so students MUST complete actual bank authentication before gaining access
     setIsProcessing(true);
-    setVerificationStage('Verifying Cashfree payment settlement server-side...');
+    setVerificationStage(
+      cashfreeTab === 'netbanking'
+        ? `Connecting to secure NetBanking portal for ${cashfreeBank}...`
+        : 'Connecting to secure payment gateway...'
+    );
 
-    const activeOrderId = pendingOrderInfo?.orderId || `ITPT-CF-${Date.now().toString().slice(-6)}`;
-    const mockTxnId = `CF-TXN-${Date.now().toString().slice(-8)}`;
+    const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
+    let orderRes = pendingOrderInfo;
+    if (!orderRes || !orderRes.orderId) {
+      orderRes = await createPendingOrder({
+        items: cart,
+        currency: 'INR',
+        customerName: customerName.trim() || 'Valued Learner',
+        customerEmail: finalEmail,
+        customerPhone,
+        gatewayProvider: 'Razorpay'
+      });
+    }
 
-    const verifyRes = await verifyPaidOrder({
-      orderId: activeOrderId,
-      paymentId: mockTxnId,
-      gatewayProvider: 'Cashfree'
-    });
-
-    setIsProcessing(false);
-    setVerificationStage('');
-
-    if (verifyRes.success) {
-      setCompletedOrder(verifyRes.order);
-      setCheckoutStep('success');
+    if (orderRes && orderRes.success) {
+      setPendingOrderInfo(orderRes);
+      await launchRazorpayModal(
+        orderRes,
+        finalEmail,
+        cashfreeTab === 'netbanking' ? 'netbanking' : (cashfreeTab === 'upi' ? 'upi' : 'card')
+      );
     } else {
-      setPaymentError(verifyRes.error || 'Cashfree payment verification failed. Course access was NOT granted.');
+      setIsProcessing(false);
+      setVerificationStage('');
+      setPaymentError(orderRes?.error || 'Unable to establish secure banking session. Please retry or choose UPI Direct.');
     }
   };
 
-  // Handle PayU Modal Submit
+  // Handle PayU Modal Submit (Seamlessly connects to verified payment gateway / payment link)
   const handlePayuModalSubmit = async () => {
     setShowPayuModal(false);
+
+    // 1. If official payment link is configured, open official gateway window
+    const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
+    const directLink = gwPaymentLink || cart[0]?.paymentLink || cart[0]?.paymentLinks?.payu;
+
+    if (directLink && directLink.trim().startsWith('http')) {
+      setActivePaymentLink(directLink.trim());
+      setShowPaymentLinkModal(true);
+      window.open(directLink.trim(), '_blank');
+      return;
+    }
+
+    // 2. Seamlessly route NetBanking, Cards, or UPI through Razorpay live gateway
+    // so students MUST complete actual bank authentication before gaining access
     setIsProcessing(true);
-    setVerificationStage('Verifying PayU Biz India bank authorization server-side...');
+    setVerificationStage(
+      payuTab === 'netbanking'
+        ? `Connecting to secure NetBanking portal for ${payuBank}...`
+        : 'Connecting to secure payment gateway...'
+    );
 
-    const activeOrderId = pendingOrderInfo?.orderId || `ITPT-PAYU-${Date.now().toString().slice(-6)}`;
-    const mockTxnId = `PAYU-TXN-${Date.now().toString().slice(-8)}`;
+    const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
+    let orderRes = pendingOrderInfo;
+    if (!orderRes || !orderRes.orderId) {
+      orderRes = await createPendingOrder({
+        items: cart,
+        currency: 'INR',
+        customerName: customerName.trim() || 'Valued Learner',
+        customerEmail: finalEmail,
+        customerPhone,
+        gatewayProvider: 'Razorpay'
+      });
+    }
 
-    const verifyRes = await verifyPaidOrder({
-      orderId: activeOrderId,
-      paymentId: mockTxnId,
-      gatewayProvider: 'PayU'
-    });
-
-    setIsProcessing(false);
-    setVerificationStage('');
-
-    if (verifyRes.success) {
-      setCompletedOrder(verifyRes.order);
-      setCheckoutStep('success');
+    if (orderRes && orderRes.success) {
+      setPendingOrderInfo(orderRes);
+      await launchRazorpayModal(
+        orderRes,
+        finalEmail,
+        payuTab === 'netbanking' ? 'netbanking' : (payuTab === 'upi' ? 'upi' : 'card')
+      );
     } else {
-      setPaymentError(verifyRes.error || 'PayU payment verification failed. Course access was NOT granted.');
+      setIsProcessing(false);
+      setVerificationStage('');
+      setPaymentError(orderRes?.error || 'Unable to establish secure banking session. Please retry or choose UPI Direct.');
     }
   };
 
-  // Handle CCAvenue Modal Submit
+  // Handle CCAvenue Modal Submit (Seamlessly connects to verified payment gateway / payment link)
   const handleCcavenueModalSubmit = async () => {
     setShowCcavenueModal(false);
+
+    // 1. If official payment link is configured, open official gateway window
+    const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
+    const directLink = gwPaymentLink || cart[0]?.paymentLink || cart[0]?.paymentLinks?.ccavenue;
+
+    if (directLink && directLink.trim().startsWith('http')) {
+      setActivePaymentLink(directLink.trim());
+      setShowPaymentLinkModal(true);
+      window.open(directLink.trim(), '_blank');
+      return;
+    }
+
+    // 2. Seamlessly route NetBanking, Cards, or UPI through Razorpay live gateway
+    // so students MUST complete actual bank authentication before gaining access
     setIsProcessing(true);
-    setVerificationStage('Verifying CCAvenue 256-Bit SSL transaction with merchant server...');
+    setVerificationStage(
+      ccavenueTab === 'netbanking'
+        ? `Connecting to secure NetBanking portal for ${ccavenueBank}...`
+        : 'Connecting to secure payment gateway...'
+    );
 
-    const activeOrderId = pendingOrderInfo?.orderId || `ITPT-CCAV-${Date.now().toString().slice(-6)}`;
-    const mockTxnId = `CCAV-TXN-${Date.now().toString().slice(-8)}`;
+    const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
+    let orderRes = pendingOrderInfo;
+    if (!orderRes || !orderRes.orderId) {
+      orderRes = await createPendingOrder({
+        items: cart,
+        currency: 'INR',
+        customerName: customerName.trim() || 'Valued Learner',
+        customerEmail: finalEmail,
+        customerPhone,
+        gatewayProvider: 'Razorpay'
+      });
+    }
 
-    const verifyRes = await verifyPaidOrder({
-      orderId: activeOrderId,
-      paymentId: mockTxnId,
-      gatewayProvider: 'CCAvenue'
-    });
-
-    setIsProcessing(false);
-    setVerificationStage('');
-
-    if (verifyRes.success) {
-      setCompletedOrder(verifyRes.order);
-      setCheckoutStep('success');
+    if (orderRes && orderRes.success) {
+      setPendingOrderInfo(orderRes);
+      await launchRazorpayModal(
+        orderRes,
+        finalEmail,
+        ccavenueTab === 'netbanking' ? 'netbanking' : (ccavenueTab === 'upi' ? 'upi' : 'card')
+      );
     } else {
-      setPaymentError(verifyRes.error || 'CCAvenue payment verification failed. Course access was NOT granted.');
+      setIsProcessing(false);
+      setVerificationStage('');
+      setPaymentError(orderRes?.error || 'Unable to establish secure banking session. Please retry or choose UPI Direct.');
     }
   };
 
@@ -957,7 +1041,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* Global Payment Failure / Alert Banner */}
         {paymentError && (
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 animate-shake">
+          <div id="checkout-payment-error" className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 animate-shake">
             <div className="flex items-start space-x-3">
               <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
@@ -1254,6 +1338,17 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                         </div>
                       )}
 
+                      {/* Inline Error Notice */}
+                      {paymentError && (
+                        <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-800 font-medium space-y-1 animate-shake">
+                          <div className="flex items-center space-x-2 font-bold text-rose-900">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>Payment Order Notice</span>
+                          </div>
+                          <p>{paymentError}</p>
+                        </div>
+                      )}
+
                       {/* Unified Launch Button */}
                       <button
                         type="button"
@@ -1275,6 +1370,25 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                           </>
                         )}
                       </button>
+
+                      {/* Alternative: Direct Payment Link if available */}
+                      {(selectedGateway.paymentLink || selectedGateway.payment_link) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const link = (selectedGateway.paymentLink || selectedGateway.payment_link).trim();
+                            setActivePaymentLink(link);
+                            setShowPaymentLinkModal(true);
+                            try {
+                              window.open(link, '_blank', 'noopener,noreferrer');
+                            } catch (e) {}
+                          }}
+                          className="w-full bg-white hover:bg-slate-50 text-purple-700 border border-purple-200 text-xs font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Or Pay via Direct {selectedGateway.provider} Payment Link</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1548,6 +1662,31 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
               <p className="text-xs text-gray-500">
                 Opening Razorpay TLS 1.3 official payment modal...
               </p>
+              <div className="pt-2 flex flex-col space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRazorpayLoadingModal(false);
+                    setIsProcessing(false);
+                    const link = selectedGateway?.paymentLink || selectedGateway?.payment_link || 'https://razorpay.me/@ITPracticeTests';
+                    setActivePaymentLink(link);
+                    setShowPaymentLinkModal(true);
+                  }}
+                  className="text-xs font-bold text-purple-700 hover:underline cursor-pointer"
+                >
+                  Switch to Razorpay Payment Link / Test Simulation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRazorpayLoadingModal(false);
+                    setIsProcessing(false);
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1602,11 +1741,23 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 <div id="paypal-modal-button-container" className="min-h-[140px] relative z-10 flex flex-col justify-center" />
 
                 {!paypalSdkLoaded && (
-                  <div className="flex flex-col items-center justify-center py-6 text-xs text-gray-500 space-y-2">
-                    <RefreshCw className="w-6 h-6 animate-spin text-[#003087]" />
+                  <div className="flex flex-col items-center justify-center py-4 text-xs text-gray-500 space-y-2">
+                    <RefreshCw className="w-5 h-5 animate-spin text-[#003087]" />
                     <span className="font-medium">Connecting to PayPal Global Gateway...</span>
                   </div>
                 )}
+
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <a
+                    href={`https://paypal.me/${selectedGateway?.paypalMe || 'ExpertsTeachers'}/${totalUSD}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center space-x-2 bg-[#0079C1] hover:bg-[#00457C] text-white font-extrabold text-xs py-2.5 rounded-xl transition shadow-xs"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Pay via Official PayPal.Me Link (${totalUSD} USD)</span>
+                  </a>
+                </div>
 
                 <div className="flex items-center justify-between pt-2 text-[11px] border-t border-slate-100">
                   <button
@@ -1754,7 +1905,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                     <select
                       value={cashfreeBank}
                       onChange={(e) => setCashfreeBank(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-600 font-medium"
                     >
                       <option>HDFC Bank</option>
                       <option>State Bank of India</option>
@@ -1763,6 +1914,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                       <option>Kotak Mahindra Bank</option>
                       <option>Punjab National Bank</option>
                     </select>
+                    <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      🔒 You will be securely redirected to <strong>{cashfreeBank}</strong> to authorize payment. Course access will unlock immediately once your bank confirms transaction completion.
+                    </p>
                   </div>
                 )}
 
@@ -1772,7 +1926,11 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                   className="w-full bg-[#0A102E] hover:bg-slate-900 text-white font-extrabold text-xs py-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <Lock className="w-4 h-4 text-amber-400" />
-                  <span>Pay ₹{totalINR} via Cashfree</span>
+                  <span>
+                    {cashfreeTab === 'netbanking'
+                      ? `Authorize ₹${totalINR} via ${cashfreeBank}`
+                      : `Pay ₹${totalINR} via Cashfree`}
+                  </span>
                 </button>
 
                 <div className="flex items-center justify-between text-[11px] pt-1">
@@ -1913,7 +2071,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                     <select
                       value={payuBank}
                       onChange={(e) => setPayuBank(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600 font-medium"
                     >
                       <option>State Bank of India</option>
                       <option>HDFC Bank</option>
@@ -1921,6 +2079,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                       <option>Axis Bank</option>
                       <option>Bank of Baroda</option>
                     </select>
+                    <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      🔒 You will be securely connected to <strong>{payuBank}</strong> via 256-bit encrypted banking portal. Course access will unlock once payment is confirmed.
+                    </p>
                   </div>
                 )}
 
@@ -1930,7 +2091,11 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                   className="w-full bg-[#1A1F2C] hover:bg-black text-white font-extrabold text-xs py-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <Lock className="w-4 h-4 text-emerald-400" />
-                  <span>Authorize ₹{totalINR} on PayU</span>
+                  <span>
+                    {payuTab === 'netbanking'
+                      ? `Authorize ₹${totalINR} via ${payuBank}`
+                      : `Authorize ₹${totalINR} on PayU`}
+                  </span>
                 </button>
 
                 <div className="flex items-center justify-between text-[11px] pt-1">
@@ -2054,13 +2219,16 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                     <select
                       value={ccavenueBank}
                       onChange={(e) => setCcavenueBank(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium"
                     >
                       <option>HDFC Bank</option>
                       <option>State Bank of India</option>
                       <option>ICICI Bank</option>
                       <option>Axis Bank</option>
                     </select>
+                    <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      🔒 You will be securely connected to <strong>{ccavenueBank}</strong> NetBanking to complete payment. Course access will unlock once payment is confirmed.
+                    </p>
                   </div>
                 )}
 
@@ -2081,7 +2249,11 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                   className="w-full bg-[#0b2447] hover:bg-blue-950 text-white font-extrabold text-xs py-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <Lock className="w-4 h-4 text-amber-300" />
-                  <span>Authorize Payment via CCAvenue</span>
+                  <span>
+                    {ccavenueTab === 'netbanking'
+                      ? `Authorize Payment via ${ccavenueBank}`
+                      : 'Authorize Payment via CCAvenue'}
+                  </span>
                 </button>
 
                 <div className="flex items-center justify-between text-[11px] pt-1">

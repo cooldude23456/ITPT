@@ -2,11 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { getProductById } from './db.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load canonical catalog from src/data/catalog.json
 let cachedCatalog = null;
+const dynamicProductsCache = new Map();
 
 export function getCanonicalCatalog() {
   if (cachedCatalog) return cachedCatalog;
@@ -22,9 +25,58 @@ export function getCanonicalCatalog() {
 }
 
 export function findCanonicalProduct(productId) {
+  if (!productId) return null;
   const catalog = getCanonicalCatalog();
-  return catalog.find(p => p.id === productId) || null;
+  const found = catalog.find(p => p.id === productId);
+  if (found) return found;
+
+  if (dynamicProductsCache.has(productId)) {
+    return dynamicProductsCache.get(productId);
+  }
+
+  return null;
 }
+
+export async function findProductOrCustom(item) {
+  if (!item) return null;
+  const id = typeof item === 'string' ? item : item.id;
+  if (!id) return null;
+
+  // 1. Check local catalog / memory cache
+  const localFound = findCanonicalProduct(id);
+  if (localFound) return localFound;
+
+  // 2. Check Supabase products table
+  try {
+    const dbProduct = await getProductById(id);
+    if (dbProduct) {
+      dynamicProductsCache.set(id, dbProduct);
+      return dbProduct;
+    }
+  } catch (err) {
+    console.warn(`[Catalog Warning] Failed to query product "${id}" from database:`, err.message);
+  }
+
+  // 3. Fallback for custom instructor / user created courses
+  if (typeof item === 'object' && (item.title || item.name)) {
+    const pINR = Math.max(0, Number(item.priceINR ?? item.price_inr ?? item.price ?? 0));
+    const pUSD = Math.max(0, Number(item.priceUSD ?? item.price_usd ?? (pINR > 0 ? +(pINR / 86).toFixed(2) : 0)));
+    const customProd = {
+      id: String(item.id).trim(),
+      title: String(item.title || item.name).trim().slice(0, 200),
+      vendor: item.vendor || 'ITPracticeTests Certified',
+      category: item.category || 'Certification Practice Tests',
+      priceINR: pINR,
+      priceUSD: pUSD,
+      isFree: pINR === 0 && pUSD === 0
+    };
+    dynamicProductsCache.set(customProd.id, customProd);
+    return customProd;
+  }
+
+  return null;
+}
+
 
 export function isCourseFree(product) {
   if (!product) return false;
