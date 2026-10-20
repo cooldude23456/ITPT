@@ -363,6 +363,7 @@ export default function MyLearningPage({ onTakeTest, onViewResult, onSelectProdu
         <ReviewModal
           isOpen={!!reviewModalProduct}
           onClose={() => setReviewModalProduct(null)}
+          product={reviewModalProduct}
           productId={reviewModalProduct.id}
           productTitle={reviewModalProduct.title}
         />

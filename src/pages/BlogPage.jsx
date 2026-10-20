@@ -116,14 +116,9 @@ export default function BlogPage({ onSelectProduct, onTakeTest }) {
               <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-100 text-xs">
                 {/* Author Info */}
                 <div className="flex items-center space-x-3">
-                  <img
-                    src={selectedBlog.authorAvatar || '/6577847_169c.webp'}
-                    alt={selectedBlog.author}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-purple-600"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop';
-                    }}
-                  />
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-sm flex items-center justify-center border-2 border-purple-500 shadow-sm shrink-0 tracking-wider select-none">
+                    YD
+                  </div>
                   <div>
                     <div className="font-extrabold text-sm text-udemy-dark flex items-center space-x-1.5">
                       <span>{selectedBlog.author}</span>
@@ -285,11 +280,9 @@ export default function BlogPage({ onSelectProduct, onTakeTest }) {
 
               {/* Author Bio Box */}
               <div className="mt-8 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-5">
-                <img
-                  src={selectedBlog.authorAvatar || '/6577847_169c.webp'}
-                  alt={selectedBlog.author}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-purple-600 shrink-0"
-                />
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-xl flex items-center justify-center border-2 border-purple-500 shadow-md shrink-0 tracking-wider select-none">
+                  YD
+                </div>
                 <div className="space-y-1.5">
                   <h4 className="font-extrabold text-base text-udemy-dark">
                     About {selectedBlog.author}
@@ -297,15 +290,11 @@ export default function BlogPage({ onSelectProduct, onTakeTest }) {
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Yogesh Dhiman is a Senior Cloud Solutions Architect and popular Udemy instructor with over 48,000 students across AWS, Azure, GCP, and Kubernetes certifications. He is dedicated to helping technical professionals pass high-stakes exams on their first attempt.
                   </p>
-                  <a
-                    href="https://www.udemy.com/user/yogesh-dhiman-22/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1 text-xs font-bold text-purple-700 hover:underline"
-                  >
-                    <span>View all courses by Yogesh Dhiman on Udemy.com</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  <div className="pt-1">
+                    <span className="text-xs font-semibold text-purple-700">
+                      Lead Certification Author & Cloud Architect at ITPracticeTests
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -416,11 +405,9 @@ export default function BlogPage({ onSelectProduct, onTakeTest }) {
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-xs">
-                  <img
-                    src={featuredBlog.authorAvatar || '/6577847_169c.webp'}
-                    alt={featuredBlog.author}
-                    className="w-8 h-8 rounded-full object-cover border border-purple-500"
-                  />
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-[11px] flex items-center justify-center border border-purple-500 shadow-xs shrink-0 tracking-wider select-none">
+                    YD
+                  </div>
                   <span className="font-bold text-gray-800">{featuredBlog.author}</span>
                 </div>
 

@@ -31,14 +31,9 @@ export default function AboutPage({ onExplore }) {
         {/* Lead Instructor Profile */}
         <div className="bg-white rounded-2xl border border-udemy-border p-8 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <img
-              src="/6577847_169c.webp"
-              alt="Yogesh Dhiman"
-              className="w-24 h-24 rounded-full object-cover border-4 border-purple-600 shrink-0"
-              onError={(e) => {
-                e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop';
-              }}
-            />
+            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-3xl flex items-center justify-center border-4 border-purple-500 shadow-lg shrink-0 tracking-wider select-none">
+              YD
+            </div>
             <div className="space-y-1 text-center sm:text-left">
               <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">
                 Founder & Lead Instructor
@@ -59,15 +54,15 @@ export default function AboutPage({ onExplore }) {
             Yogesh Dhiman is an acclaimed technical trainer and cloud architect. Having trained thousands of candidates globally through his bestselling courses on Udemy, Yogesh established ITPracticeTests to provide dedicated, distraction-free practice simulators, verified explanations, and comprehensive interview practice directly to students worldwide.
           </p>
 
-          <a
-            href="https://www.udemy.com/user/yogesh-dhiman-22/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-lg transition"
-          >
-            <span>View Yogesh Dhiman’s Official Profile on Udemy</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          {onExplore && (
+            <button
+              onClick={onExplore}
+              className="inline-flex items-center space-x-2 bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-lg transition cursor-pointer"
+            >
+              <span>Explore Practice Tests</span>
+              <BookOpen className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Corporate & Registration Information */}

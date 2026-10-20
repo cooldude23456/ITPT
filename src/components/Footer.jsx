@@ -14,8 +14,10 @@ import {
   Shield,
   FileCheck,
   CheckCircle2,
-  RotateCcw
+  RotateCcw,
+  Cookie
 } from 'lucide-react';
+import SocialLinksBar from './SocialLinks';
 
 export default function Footer({ onNavigate }) {
   return (
@@ -222,32 +224,24 @@ export default function Footer({ onNavigate }) {
             {/* Instructor Box */}
             <div className="pt-2 bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-2">
               <div className="flex items-center space-x-3">
-                <img
-                  src="/6577847_169c.webp"
-                  alt="Yogesh Dhiman"
-                  className="w-12 h-12 rounded-full object-cover border-2 border-purple-500"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop';
-                  }}
-                />
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-sm flex items-center justify-center border-2 border-purple-400 shadow-md shrink-0 tracking-wider select-none">
+                  YD
+                </div>
                 <div>
                   <div className="text-sm font-extrabold text-white">Curated by Yogesh Dhiman</div>
                   <div className="text-xs text-purple-300 font-semibold">
-                    Senior Cloud Solutions Architect & Udemy Instructor
+                    Senior Cloud Solutions Architect & Lead Instructor
                   </div>
                 </div>
               </div>
 
               <div className="pt-1">
-                <a
-                  href="https://www.udemy.com/user/yogesh-dhiman-22/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 bg-purple-700 hover:bg-purple-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                <button
+                  onClick={() => onNavigate('catalog')}
+                  className="inline-flex items-center space-x-2 bg-purple-700 hover:bg-purple-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
                 >
-                  <span>View Yogesh Dhiman’s Official Udemy Profile</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                  <span>Browse All Practice Tests</span>
+                </button>
               </div>
             </div>
           </div>
@@ -445,6 +439,13 @@ export default function Footer({ onNavigate }) {
         </div>
 
         {/* ======================================================== */}
+        {/* 3.5. OFFICIAL SOCIAL MEDIA CHANNELS (All 10 Platforms) */}
+        {/* ======================================================== */}
+        <div className="py-6 border-b border-slate-800">
+          <SocialLinksBar variant="footer" />
+        </div>
+
+        {/* ======================================================== */}
         {/* 4. BOTTOM COPYRIGHT & LEGAL BAR (Readable & High Contrast) */}
         {/* ======================================================== */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-300 gap-4">
@@ -486,6 +487,14 @@ export default function Footer({ onNavigate }) {
               className="hover:text-white hover:underline transition"
             >
               Terms of Service
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('itpt_open_cookie_preferences'))}
+              className="hover:text-white hover:underline transition flex items-center space-x-1"
+              title="Manage Cookie and Privacy Preferences"
+            >
+              <Cookie className="w-3.5 h-3.5 text-amber-400" />
+              <span>Cookie Settings</span>
             </button>
             <button
               onClick={() => onNavigate('refund')}

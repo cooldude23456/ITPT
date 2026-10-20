@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { saveContactInquiryToSupabase } from '../services/supabaseService';
 import { useApp } from '../context/AppContext';
+import SocialLinksBar from '../components/SocialLinks';
 
 export default function ContactPage() {
   const { addSecurityAuditLog } = useApp?.() || {};
@@ -207,6 +208,14 @@ export default function ContactPage() {
               </form>
             )}
           </div>
+        </div>
+
+        {/* Official Social Media Channels Grid (All 10 Platforms) */}
+        <div className="bg-white rounded-2xl border border-udemy-border p-6 md:p-8 shadow-sm">
+          <SocialLinksBar
+            variant="cards"
+            title="Connect with Us on Official Social Media Channels"
+          />
         </div>
       </div>
     </div>

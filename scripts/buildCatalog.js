@@ -149,8 +149,7 @@ for (let i = 1; i < rows.length; i++) {
     ],
     instructor: {
       name: 'Yogesh Dhiman',
-      title: 'Top-Rated Udemy Instructor & Senior Cloud Architect',
-      udemyUrl: 'https://www.udemy.com/user/yogesh-dhiman-22/',
+      title: 'Top-Rated Certification Instructor & Senior Cloud Architect',
       avatar: '/6577847_169c.webp',
       rating: 4.8,
       students: '48,000+',
@@ -193,8 +192,7 @@ if (!hasFreeTest && products.length > 0) {
     ],
     instructor: {
       name: 'Yogesh Dhiman',
-      title: 'Top-Rated Udemy Instructor & Senior Cloud Architect',
-      udemyUrl: 'https://www.udemy.com/user/yogesh-dhiman-22/',
+      title: 'Top-Rated Certification Instructor & Senior Cloud Architect',
       avatar: '/6577847_169c.webp',
       rating: 4.8,
       students: '48,000+',

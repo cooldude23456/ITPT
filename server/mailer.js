@@ -30,7 +30,7 @@ const DEFAULT_CONFIG = {
   senderName: process.env.SMTP_SENDER_NAME || 'ITPracticeTests Orders',
   senderEmail: process.env.SMTP_SENDER_EMAIL || process.env.SMTP_USER || 'orders@itpracticetests.com',
   primaryAdminEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 'support@itpracticetests.com',
-  secondaryAdminEmail: process.env.ADMIN_NOTIFICATION_CC || 'yogesh@itpracticetests.com',
+  secondaryAdminEmail: process.env.ADMIN_NOTIFICATION_CC || 'rath.sanjiv.rath@gmail.com',
   enableInstantEmail: true,
   instructorName: 'Yogesh Dhiman',
   businessName: 'ITPracticeTests',
@@ -125,6 +125,7 @@ function createTransporter(config = getMailerConfig()) {
  * Builds responsive HTML email template for Admin Order Notification
  */
 export function buildAdminOrderHtml(order, config = getMailerConfig()) {
+  const status = (order.status || 'PENDING').toUpperCase();
   const currencySymbol = order.currency === 'USD' ? '$' : '₹';
   const total = Number(order.total || 0);
   const subtotal = Number(order.subtotal || total);
@@ -136,12 +137,52 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
   const cgst = +(gstAmount / 2).toFixed(2);
   const sgst = +(gstAmount / 2).toFixed(2);
 
+  let badgeHtml = '';
+  let statusDisplay = '';
+  let noticeHtml = '';
+  let headerTitle = 'New Order Alert';
+
+  if (status === 'PAID') {
+    headerTitle = 'New Paid Order on ITPracticeTests.com';
+    badgeHtml = `
+      <div style="background: #10b981; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; display: inline-block; margin-bottom: 12px;">
+        ✅ Verified Customer Purchase - Access Active
+      </div>`;
+    statusDisplay = '<span style="color: #15803d; font-weight: 800;">PAID &amp; FULFILLED</span>';
+    noticeHtml = `
+      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 12px; font-size: 11px; color: #065f46; margin-top: 20px;">
+        <strong>🔒 Zero-Trust Fulfillment:</strong> Access to all purchased exams has been confirmed and provisioned directly into the student dashboard. A tax invoice receipt was delivered to <strong>${order.customerEmail}</strong>.
+      </div>`;
+  } else if (status === 'FAILED') {
+    headerTitle = 'Order Payment Failed on ITPracticeTests.com';
+    badgeHtml = `
+      <div style="background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; display: inline-block; margin-bottom: 12px;">
+        ❌ Payment Failed / Verification Declined
+      </div>`;
+    statusDisplay = '<span style="color: #b91c1c; font-weight: 800;">PAYMENT FAILED / DECLINED</span>';
+    noticeHtml = `
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; font-size: 11px; color: #991b1b; margin-top: 20px;">
+        <strong>⚠️ Security Notice:</strong> Payment transaction failed or could not be verified with banking records. Course access was <strong>NOT</strong> granted.${order.failureReason ? `<br><strong>Reason:</strong> ${order.failureReason}` : ''}
+      </div>`;
+  } else {
+    headerTitle = 'New Order Placed on ITPracticeTests.com';
+    badgeHtml = `
+      <div style="background: #f59e0b; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; display: inline-block; margin-bottom: 12px;">
+        ⏳ New Order Placed - Awaiting Payment
+      </div>`;
+    statusDisplay = '<span style="color: #b45309; font-weight: 800;">AWAITING PAYMENT / IN PROCESS</span>';
+    noticeHtml = `
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; font-size: 11px; color: #92400e; margin-top: 20px;">
+        <strong>⏳ Order Status:</strong> Student has placed this order on the website and is currently on the checkout/payment step. Access will unlock automatically upon official gateway/bank confirmation.
+      </div>`;
+  }
+
   const itemsRows = (order.items || []).map((item, idx) => `
     <tr style="border-bottom: 1px solid #e2e8f0;">
       <td style="padding: 12px 10px; font-size: 13px; color: #1e293b; font-weight: 600;">
         ${idx + 1}. ${item.title || 'Practice Exam'}
         <div style="font-size: 11px; color: #64748b; font-weight: normal; margin-top: 3px;">
-          Vendor: <strong>${item.vendor || 'IT Certification'}</strong> • Full Practice Tests Included • Lifetime Access Active
+          Vendor: <strong>${item.vendor || 'IT Certification'}</strong>
         </div>
       </td>
       <td style="padding: 12px 10px; font-size: 13px; color: #0f172a; text-align: right; font-weight: bold; white-space: nowrap;">
@@ -155,17 +196,15 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>New Order Received - ${order.orderId}</title>
+  <title>Order ${order.orderId} - ${headerTitle}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #334155;">
   <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
     
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #4c1d95 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
-      <div style="background: #10b981; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; border-radius: 9999px; display: inline-block; margin-bottom: 12px;">
-        🛒 Verified Customer Purchase
-      </div>
-      <h1 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">New Order on ITPracticeTests.com</h1>
+      ${badgeHtml}
+      <h1 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">${headerTitle}</h1>
       <p style="margin: 8px 0 0; font-size: 13px; opacity: 0.95; color: #e9d5ff;">
         Order Reference: <strong>${order.orderId}</strong> • Amount: <strong>${currencySymbol}${total}</strong>
       </p>
@@ -176,7 +215,7 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
       <p style="font-size: 14px; margin-top: 0; color: #1e293b; line-height: 1.6;">
         Hello <strong>${config.instructorName}</strong>,
         <br>
-        A student has just completed a verified purchase on <strong>ITPracticeTests.com</strong>. The transaction was verified and lifetime course enrollment was unlocked.
+        Order details for reference <strong>${order.orderId}</strong> are summarized below:
       </p>
 
       <!-- Customer Details -->
@@ -219,15 +258,15 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px; font-size: 12px; color: #64748b; font-weight: 600;">Payment Method:</td>
-          <td style="padding: 8px; font-size: 12px; color: #0f172a; font-weight: 600;">${order.paymentMethod || 'Verified Gateway Capture'}</td>
+          <td style="padding: 8px; font-size: 12px; color: #0f172a; font-weight: 600;">${order.paymentMethod || 'Gateway Capture'}</td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px; font-size: 12px; color: #64748b; font-weight: 600;">Transaction / Ref ID:</td>
-          <td style="padding: 8px; font-size: 12px; color: #059669; font-weight: 700; font-family: monospace;">${order.transactionId || 'CONFIRMED'}</td>
+          <td style="padding: 8px; font-size: 12px; color: #059669; font-weight: 700; font-family: monospace;">${order.transactionId || order.attemptedTransactionId || 'PENDING'}</td>
         </tr>
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px; font-size: 12px; color: #64748b; font-weight: 600;">Order Status:</td>
-          <td style="padding: 8px; font-size: 12px; color: #15803d; font-weight: 800;">PAID &amp; FULFILLED</td>
+          <td style="padding: 8px; font-size: 12px; font-weight: 800;">${statusDisplay}</td>
         </tr>
       </table>
 
@@ -268,16 +307,14 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
             <td style="padding: 4px 0; text-align: right; color: #475569;">${currencySymbol}${gstAmount} (${currencySymbol}${cgst} + ${currencySymbol}${sgst})</td>
           </tr>
           <tr style="border-top: 2px dashed #d8b4fe;">
-            <td style="padding: 10px 0 4px; font-size: 16px; font-weight: 900; color: #581c87;">Grand Total Paid:</td>
+            <td style="padding: 10px 0 4px; font-size: 16px; font-weight: 900; color: #581c87;">Grand Total:</td>
             <td style="padding: 10px 0 4px; text-align: right; font-size: 18px; font-weight: 900; color: #581c87;">${currencySymbol}${total}</td>
           </tr>
         </table>
       </div>
 
       <!-- Security & Fulfillment Notice -->
-      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 12px; font-size: 11px; color: #065f46; margin-top: 20px;">
-        <strong>🔒 Zero-Trust Fulfillment:</strong> Access to all purchased exams has been confirmed and provisioned directly into the student's dashboard. A tax invoice receipt was delivered to <strong>${order.customerEmail}</strong>.
-      </div>
+      ${noticeHtml}
     </div>
 
     <!-- Footer -->
@@ -305,15 +342,16 @@ export function buildAdminOrderHtml(order, config = getMailerConfig()) {
  * Builds Plaintext email summary
  */
 export function buildAdminOrderPlainText(order, config = getMailerConfig()) {
+  const status = (order.status || 'PENDING').toUpperCase();
   const currencySymbol = order.currency === 'USD' ? '$' : '₹';
   const itemsText = (order.items || []).map((it, idx) => `  ${idx + 1}. ${it.title} (${currencySymbol}${order.currency === 'USD' ? (it.priceUSD || it.priceINR) : it.priceINR})`).join('\n');
 
   return `
-[ITPracticeTests] NEW ORDER NOTIFICATION #${order.orderId}
+[ITPracticeTests] ORDER NOTIFICATION #${order.orderId}
 ==================================================
 Date: ${order.date || new Date().toISOString().split('T')[0]}
-Total Paid: ${currencySymbol}${order.total} ${order.currency}
-Status: PAID (Verified via ${order.paymentMethod || order.paymentGateway})
+Total Amount: ${currencySymbol}${order.total} ${order.currency}
+Status: ${status} (${order.paymentMethod || order.paymentGateway})
 
 CUSTOMER DETAILS:
 Name: ${order.customerName}
@@ -328,10 +366,10 @@ Subtotal: ${currencySymbol}${order.subtotal || order.total}
 Discount: ${currencySymbol}${order.discount || 0}
 Total: ${currencySymbol}${order.total}
 GSTIN: ${config.gstNumber} (18% GST Compliant)
-Transaction ID: ${order.transactionId || 'CONFIRMED'}
+Transaction ID: ${order.transactionId || order.attemptedTransactionId || 'PENDING'}
 
 FULFILLMENT STATUS:
-Lifetime access has been provisioned to the student dashboard.
+${status === 'PAID' ? 'Lifetime access provisioned to student dashboard.' : status === 'FAILED' ? `Payment failed or declined. Reason: ${order.failureReason || 'Not verified'}` : 'Order placed, awaiting customer payment completion.'}
 ==================================================
   `.trim();
 }
@@ -347,7 +385,17 @@ export async function sendAdminOrderEmail(order) {
     return { success: false, reason: 'DISABLED' };
   }
 
-  const subject = `🛒 [New Order] ${order.orderId} - ${order.currency === 'USD' ? '$' : '₹'}${order.total} from ${order.customerName || 'Student'}`;
+  const status = (order.status || 'PENDING').toUpperCase();
+
+  // Admin should ONLY receive notification emails for successfully placed orders (PAID / COMPLETED)
+  // Suppress emails for pending, awaiting payment, or failed orders to avoid inbox spam.
+  if (status !== 'PAID' && status !== 'COMPLETED') {
+    console.log(`[Mailer] Suppressed admin order notification for order ${order.orderId || order.id || 'N/A'} (status: ${status}). Admin only receives successfully placed paid orders.`);
+    return { success: false, reason: 'SUPPRESSED_NON_PAID', status };
+  }
+
+  const currencySymbol = order.currency === 'USD' ? '$' : '₹';
+  const subject = `✅ [Order Paid & Verified] ${order.orderId} - ${currencySymbol}${order.total} from ${order.customerName || 'Student'}`;
   const htmlContent = buildAdminOrderHtml(order, config);
   const textContent = buildAdminOrderPlainText(order, config);
 

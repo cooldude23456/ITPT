@@ -3,9 +3,30 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    overflow-y: scroll; /* Force vertical scrollbar gutter so page content never shifts and document is always vertically scrollable */
+    overflow-x: hidden; /* Prevent horizontal overflow from locking or disturbing vertical gestures */
+    scrollbar-width: thin; /* Firefox standard */
+    scrollbar-color: #94a3b8 #f1f5f9; /* Firefox colors */
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply text-udemy-dark bg-white font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+    min-height: 100vh;
+    width: 100%;
+    -webkit-overflow-scrolling: touch; /* Momentum scrolling on touch devices */
+    overscroll-behavior-y: auto;
+  }
+
+  #root {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
   }
 }
 
@@ -33,23 +54,34 @@
   color: #9b1c1c;
 }
 
-/* Custom scrollbars */
+/* High-contrast, comfortable 10px custom scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
+  border-left: 1px solid #e2e8f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #94a3b8;
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
+}
+
+/* Scrollbar None Utility for Horizontal Ribbon Carousels */
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* Pulse animation for live test timer */

@@ -36,7 +36,7 @@ export default function AuthModal({ onLoginSuccess, onNavigate }) {
 
   if (!authModalOpen) return null;
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
@@ -46,15 +46,19 @@ export default function AuthModal({ onLoginSuccess, onNavigate }) {
       return;
     }
 
-    const res = loginUser({ email, password });
-    if (res.success) {
-      setSuccessMessage(`Welcome back, ${res.user.name}!`);
-      setTimeout(() => {
-        closeAuthModal();
-        if (onLoginSuccess) onLoginSuccess(res.user);
-      }, 700);
-    } else {
-      setErrorMessage(res.message);
+    try {
+      const res = await loginUser({ email, password });
+      if (res && res.success) {
+        setSuccessMessage(`Welcome back, ${res.user.name}!`);
+        setTimeout(() => {
+          closeAuthModal();
+          if (onLoginSuccess) onLoginSuccess(res.user);
+        }, 700);
+      } else {
+        setErrorMessage(res?.message || 'Login failed. Please check credentials.');
+      }
+    } catch (err) {
+      setErrorMessage('Unable to log in. Please try again.');
     }
   };
 
@@ -86,8 +90,8 @@ export default function AuthModal({ onLoginSuccess, onNavigate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-udemy-border overflow-hidden relative">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-udemy-border overflow-hidden relative max-h-[92vh] flex flex-col my-auto">
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
@@ -97,7 +101,7 @@ export default function AuthModal({ onLoginSuccess, onNavigate }) {
         </button>
 
         {/* Modal Top Header with Logo & Tabs */}
-        <div className="bg-[#f7f9fa] border-b border-udemy-border p-6 text-center space-y-3">
+        <div className="bg-[#f7f9fa] border-b border-udemy-border p-6 text-center space-y-3 shrink-0">
           <div className="flex items-center justify-center space-x-2">
             <span className="font-extrabold text-xl tracking-tight text-udemy-dark">
               ITPractice<span className="text-purple-600">Tests</span>
@@ -147,7 +151,7 @@ export default function AuthModal({ onLoginSuccess, onNavigate }) {
         </div>
 
         {/* Form Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto">
           {/* Feedback Alerts */}
           {errorMessage && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-center space-x-2 animate-fadeIn">

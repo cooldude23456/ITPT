@@ -38,8 +38,11 @@ app.get('/api/gateways', async (req, res) => {
         provider: g.provider,
         keyId: g.key_id || g.keyId || g.clientId,
         clientId: g.clientId || g.key_id || g.keyId,
-        merchantEmail: g.merchantEmail || g.merchant_email || 'rath.sanjiv.rath@gmail.com',
-        upiVpa: g.upiVpa || g.upi_vpa || 'itpracticetests@okhdfcbank',
+        merchantEmail: g.merchantEmail || g.merchant_email || '',
+        merchantName: g.merchantName || g.merchant_name || '',
+        paypalMe: g.paypalMe || g.paypal_me || '',
+        upiVpa: g.upiVpa || g.upi_vpa || '',
+        paymentLink: g.paymentLink || g.payment_link || '',
         isTestMode: Boolean(g.is_test_mode ?? g.isTestMode),
         supportedMethods: g.supported_methods || g.supportedMethods || ['UPI', 'Debit/Credit Cards', 'NetBanking', 'Wallets'],
         currency: g.currency || (g.provider === 'PayPal' ? 'USD' : 'INR')

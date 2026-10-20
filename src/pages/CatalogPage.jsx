@@ -24,8 +24,7 @@ export default function CatalogPage({ onSelectProduct, onTakeTest }) {
     { id: 'certifications', label: 'IT Certification Tests' },
     { id: 'courses', label: 'Online Courses' },
     { id: 'interviews', label: 'IT Interview Questions' },
-    { id: 'free', label: 'Free Diagnostic Tests' },
-    { id: 'cbse', label: 'CBSE Chapter Notes' }
+    { id: 'free', label: 'Free Diagnostic Tests' }
   ];
 
   const vendors = [
@@ -48,15 +47,16 @@ export default function CatalogPage({ onSelectProduct, onTakeTest }) {
       .filter(p => {
         // Search
         if (searchQuery) {
-          const matchTitle = p.title.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchVendor = p.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchDesc = p.description.toLowerCase().includes(searchQuery.toLowerCase());
-          if (!matchTitle && !matchVendor && !matchDesc) return false;
+          const q = searchQuery.toLowerCase().trim();
+          const target = `${p.title} ${p.vendor} ${p.category} ${p.description || ''} ${p.isFree ? 'free diagnostic test' : ''}`.toLowerCase();
+          const tokens = q.split(/\s+/).filter(Boolean);
+          const matches = target.includes(q) || tokens.every(token => target.includes(token));
+          if (!matches) return false;
         }
 
         // Category
         if (selectedCategory !== 'all') {
-          if (selectedCategory === 'free' && !p.isFree) return false;
+          if (selectedCategory === 'free' && !(p.isFree || p.priceINR === 0)) return false;
           if (selectedCategory !== 'free' && p.category !== selectedCategory) return false;
         }
 
@@ -66,7 +66,7 @@ export default function CatalogPage({ onSelectProduct, onTakeTest }) {
         }
 
         // Price
-        if (priceFilter === 'free' && !p.isFree) return false;
+        if (priceFilter === 'free' && !(p.isFree || p.priceINR === 0)) return false;
         if (priceFilter === 'under500' && p.priceINR > 499) return false;
 
         // Rating

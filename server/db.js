@@ -56,12 +56,19 @@ export async function getProductById(productId) {
 export async function getActiveGateways() {
   const res = await supabaseFetch('payment_gateways?select=*');
   if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
-    return res.data;
+    const map = new Map();
+    res.data.forEach(g => {
+      const p = (g.provider || '').toLowerCase().trim();
+      if (!map.has(p) || (!map.get(p).key_id && g.key_id)) {
+        map.set(p, g);
+      }
+    });
+    return Array.from(map.values());
   }
   // Default fallback if table empty
   return [
     {
-      id: 'gw-razorpay',
+      id: 'gateway-razorpay',
       provider: 'Razorpay',
       name: 'Razorpay Payment Gateway',
       key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_SylljWgo1cubKX',
@@ -70,7 +77,7 @@ export async function getActiveGateways() {
       supported_methods: ['UPI', 'Debit/Credit Cards', 'NetBanking', 'Wallets']
     },
     {
-      id: 'gw-paypal',
+      id: 'gateway-paypal',
       provider: 'PayPal',
       name: 'PayPal International',
       key_id: process.env.PAYPAL_CLIENT_ID || 'ARwtJURxNKLGqrBYk3xFab2P90a3xNDloiHTNisj8mLY2Hd_JjARWl7Lf1t9JwOjlHGMqMgD-mgwCNzy',
@@ -248,7 +255,8 @@ export async function checkAccess({ email, productId }) {
   const orderRes = await supabaseFetch(`orders?customer_email=eq.${encodeURIComponent(cleanEmail)}`);
   if (orderRes.ok && Array.isArray(orderRes.data)) {
     for (const ord of orderRes.data) {
-      const isPaid = ord.payment_method?.includes('Verified') ||
+      const isPaid = ord.status === 'PAID' ||
+                     ord.payment_method?.includes('Verified') ||
                      (ord.transaction_id && !ord.transaction_id.startsWith('PENDING_'));
       if (isPaid && Array.isArray(ord.items)) {
         if (ord.items.some(item => item.id === productId)) {
@@ -291,7 +299,8 @@ export async function getEnrolledCourseIds(email) {
   const orderRes = await supabaseFetch(`orders?customer_email=eq.${encodeURIComponent(cleanEmail)}`);
   if (orderRes.ok && Array.isArray(orderRes.data)) {
     orderRes.data.forEach(ord => {
-      const isPaid = ord.payment_method?.includes('Verified') ||
+      const isPaid = ord.status === 'PAID' ||
+                     ord.payment_method?.includes('Verified') ||
                      (ord.transaction_id && !ord.transaction_id.startsWith('PENDING_'));
       if (isPaid && Array.isArray(ord.items)) {
         ord.items.forEach(item => {

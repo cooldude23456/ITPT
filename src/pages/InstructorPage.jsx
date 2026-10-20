@@ -92,9 +92,14 @@ export default function InstructorPage({ onSelectProduct }) {
       alert('Please enter question text');
       return;
     }
+    const finalQuestion = {
+      ...newQuestion,
+      questionType: newQuestion.type === 'multiple' ? 'Multi-select' : 'Multi-choice',
+      overallExplanation: newQuestion.explanation
+    };
     setForm(prev => ({
       ...prev,
-      questions: [...prev.questions, newQuestion]
+      questions: [...prev.questions, finalQuestion]
     }));
     setNewQuestion({
       question: '',
@@ -454,7 +459,6 @@ export default function InstructorPage({ onSelectProduct }) {
                     <option value="courses">Online Courses & Masterclasses</option>
                     <option value="interviews">IT Interview Practice Questions</option>
                     <option value="free">Free Diagnostic Practice Tests</option>
-                    <option value="cbse">CBSE Chapter Notes</option>
                   </select>
                 </div>
 

@@ -40,6 +40,28 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
   const bestsellers = products.filter(p => p.isBestseller).slice(0, 8);
   const freeTests = products.filter(p => p.isFree);
 
+  // Dynamic Featured Diagnostic Mock Test (reactive to Admin Panel updates)
+  const featuredDiagnostic = products.find(p => p.id === 'free-az900-diagnostic') ||
+    products.find(p => p.title.toLowerCase().includes('az-900') && (p.isFree || p.priceINR === 0)) ||
+    products.find(p => p.isFree || p.priceINR === 0) || {
+      id: 'free-az900-diagnostic',
+      title: 'Microsoft Azure Fundamentals (AZ-900) Mini Mock Test',
+      vendor: 'Microsoft',
+      category: 'certifications',
+      isFree: true,
+      priceINR: 0,
+      priceUSD: 0,
+      passingScore: 70,
+      durationMinutes: 45,
+      questionsCount: 50,
+      badge: 'Featured Free Exam',
+      highlights: [
+        'Cloud Concepts & Architectural Components',
+        'Microsoft Entra ID, Governance & Security',
+        'Comprehensive answer explanations & docs citations'
+      ]
+    };
+
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* 1. Udemy-Style Hero Banner Carousel Section */}
@@ -57,7 +79,7 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
-              Master IT Certifications & <br className="hidden sm:inline" />
+              Master IT Certifications &amp; <br className="hidden sm:inline" />
               Technical Interviews with Confidence.
             </h1>
 
@@ -76,7 +98,7 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
               </button>
 
               <button
-                onClick={() => onNavigateCategory('free')}
+                onClick={() => onTakeTest(featuredDiagnostic)}
                 className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-5 py-3.5 rounded-lg text-sm transition flex items-center space-x-2 backdrop-blur-sm"
               >
                 <PlayCircle className="w-4 h-4 text-emerald-400" />
@@ -109,52 +131,37 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
             <div className="bg-white text-udemy-dark rounded-2xl p-6 shadow-2xl border border-white/20 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                  Featured Free Exam
+                  {featuredDiagnostic.badge || 'Featured Free Exam'}
                 </span>
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                  100% Free
+                  {featuredDiagnostic.isFree || featuredDiagnostic.priceINR === 0 ? '100% Free' : formatPrice(featuredDiagnostic.priceINR, featuredDiagnostic.priceUSD)}
                 </span>
               </div>
 
               <div className="space-y-1">
                 <h3 className="font-extrabold text-lg text-udemy-dark leading-snug">
-                  Microsoft Azure Fundamentals (AZ-900) Mini Mock Test
+                  {featuredDiagnostic.title}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  By Yogesh Dhiman • 50 Exam Questions • 45 Mins • Instant Detailed Scorecard
+                  By Yogesh Dhiman • {featuredDiagnostic.questionsCount || 50} Exam Questions • {featuredDiagnostic.durationMinutes || featuredDiagnostic.timeLimitMins || 45} Mins • Instant Detailed Scorecard
                 </p>
               </div>
 
               <div className="space-y-2 text-xs text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Cloud Concepts & Architectural Components</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Microsoft Entra ID, Governance & Security</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Comprehensive answer explanations & docs citations</span>
-                </div>
+                {(featuredDiagnostic.highlights && featuredDiagnostic.highlights.length > 0 ? featuredDiagnostic.highlights : [
+                  'Cloud Concepts & Architectural Components',
+                  'Microsoft Entra ID, Governance & Security',
+                  'Comprehensive answer explanations & docs citations'
+                ]).map((h, i) => (
+                  <div key={i} className="flex items-center space-x-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{h}</span>
+                  </div>
+                ))}
               </div>
 
               <button
-                onClick={() => {
-                  const freeItem = products.find(p => p.id === 'free-az900-diagnostic' || p.isFree || p.priceINR === 0) || {
-                    id: 'free-az900-diagnostic',
-                    title: 'Microsoft Azure Fundamentals AZ-900 Free Diagnostic Exam Simulator',
-                    vendor: 'Microsoft',
-                    category: 'certifications',
-                    isFree: true,
-                    priceINR: 0,
-                    priceUSD: 0,
-                    passingScore: 70,
-                    durationMinutes: 45
-                  };
-                  onTakeTest(freeItem);
-                }}
+                onClick={() => onTakeTest(featuredDiagnostic)}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition flex items-center justify-center space-x-2 shadow-sm"
               >
                 <PlayCircle className="w-4 h-4" />
@@ -231,28 +238,23 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
         </div>
       </section>
 
-      {/* 4. Instructor Spotlight: Yogesh Dhiman on Udemy.com */}
+      {/* 4. Instructor Spotlight: Yogesh Dhiman */}
       <section className="bg-[#f7f9fa] border-y border-udemy-border py-16 px-4">
         <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-udemy-border p-8 md:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-4 flex flex-col items-center text-center space-y-4">
             <div className="relative">
-              <img
-                src="/6577847_169c.webp"
-                alt="Yogesh Dhiman - Udemy Instructor"
-                className="w-36 h-36 rounded-full object-cover border-4 border-purple-600 shadow-md"
-                onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop';
-                }}
-              />
+              <div className="w-36 h-36 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-4xl flex items-center justify-center border-4 border-purple-600 shadow-xl tracking-wider select-none">
+                YD
+              </div>
               <span className="absolute bottom-1 right-2 bg-amber-400 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
-                Udemy Top
+                Top Rated
               </span>
             </div>
 
             <div className="space-y-1">
               <h3 className="font-extrabold text-xl text-udemy-dark">Yogesh Dhiman</h3>
               <p className="text-xs text-purple-700 font-bold">
-                Udemy Bestselling Instructor & Senior Cloud Solutions Architect
+                Bestselling Author & Senior Cloud Solutions Architect
               </p>
             </div>
 
@@ -274,7 +276,7 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
               Passionate about making IT certification prep rigorous, accessible, and affordable.
             </h2>
             <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-              Yogesh Dhiman has spent over a decade leading enterprise cloud architectures, designing resilient multi-tier infrastructures, and training engineering teams worldwide. On Udemy and ITPracticeTests, Yogesh’s test series have helped tens of thousands of professionals pass Microsoft, AWS, CompTIA, Google Cloud, and Kubernetes examinations.
+              Yogesh Dhiman has spent over a decade leading enterprise cloud architectures, designing resilient multi-tier infrastructures, and training engineering teams worldwide. On ITPracticeTests, Yogesh’s test series have helped tens of thousands of professionals pass Microsoft, AWS, CompTIA, Google Cloud, and Kubernetes examinations.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs text-slate-700">
@@ -297,21 +299,12 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
             </div>
 
             <div className="pt-4 flex flex-wrap items-center gap-3">
-              <a
-                href="https://www.udemy.com/user/yogesh-dhiman-22/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-udemy-dark hover:bg-black text-white text-xs font-bold px-5 py-3 rounded-lg transition inline-flex items-center space-x-2 shadow-sm"
-              >
-                <span>Visit Official Udemy Profile (yogesh-dhiman-22)</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
-
               <button
                 onClick={() => onNavigateCategory('all')}
-                className="border border-purple-600 text-purple-700 hover:bg-purple-50 text-xs font-bold px-5 py-3 rounded-lg transition"
+                className="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-6 py-3 rounded-lg transition inline-flex items-center space-x-2 shadow-md cursor-pointer"
               >
-                Explore Yogesh's Practice Test Catalog
+                <span>Explore Yogesh's Practice Test Catalog</span>
+                <BookOpen className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -489,20 +482,7 @@ export default function HomePage({ onSelectProduct, onTakeTest, onNavigateCatego
               Start Exploring Practice Tests
             </button>
             <button
-              onClick={() => {
-                const freeItem = products.find(p => p.id === 'free-az900-diagnostic' || p.isFree || p.priceINR === 0) || {
-                  id: 'free-az900-diagnostic',
-                  title: 'Microsoft Azure Fundamentals AZ-900 Free Diagnostic Exam Simulator',
-                  vendor: 'Microsoft',
-                  category: 'certifications',
-                  isFree: true,
-                  priceINR: 0,
-                  priceUSD: 0,
-                  passingScore: 70,
-                  durationMinutes: 45
-                };
-                onTakeTest(freeItem);
-              }}
+              onClick={() => onTakeTest(featuredDiagnostic)}
               className="bg-purple-950/60 border border-purple-400/40 hover:bg-purple-950 text-white font-bold px-6 py-3 rounded-lg text-xs transition"
             >
               Try Free Diagnostic Mock Test

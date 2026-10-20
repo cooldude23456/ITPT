@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server/index.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "package:hostinger": "powershell -ExecutionPolicy Bypass -File ./scripts/packageHostinger.ps1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

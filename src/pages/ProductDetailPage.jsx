@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Check,
   RotateCcw,
-  Lock
+  Lock,
+  BookOpen
 } from 'lucide-react';
 
 export default function ProductDetailPage({ product, onTakeTest, onBack, onNavigate }) {
@@ -31,14 +32,17 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
     enrolled,
     currency,
     getCoursePracticeTests,
-    testAttempts
+    testAttempts,
+    enrollProduct,
+    currentUser,
+    openLoginModal
   } = useApp();
 
   const [expandedTest, setExpandedTest] = useState(0);
 
   const isInCart = cart.some(item => item.id === product.id);
   const isWishlisted = wishlist.includes(product.id);
-  const isEnrolled = enrolled.includes(product.id);
+  const isEnrolled = enrolled.includes(product.id) || (currentUser && currentUser.role === 'admin');
 
   // Get the 6 Practice Tests for this course (max 250 questions each)
   const testBundle = getCoursePracticeTests ? getCoursePracticeTests(product.id) : [
@@ -147,15 +151,9 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
             {/* Instructor credit */}
             <div className="text-xs text-slate-300 flex items-center space-x-2 pt-1">
               <span>Created by</span>
-              <a
-                href="https://www.udemy.com/user/yogesh-dhiman-22/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-300 hover:text-white font-bold underline flex items-center space-x-1"
-              >
-                <span>Yogesh Dhiman (Udemy Instructor)</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <span className="text-purple-300 font-bold">
+                {product.instructor?.name || 'Yogesh Dhiman'}
+              </span>
             </div>
 
             {/* Language & Specs */}
@@ -338,14 +336,9 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
           <div className="border border-udemy-border rounded-xl p-6 space-y-4">
             <h2 className="font-extrabold text-lg text-udemy-dark">Instructor</h2>
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-5">
-              <img
-                src="/6577847_169c.webp"
-                alt="Yogesh Dhiman"
-                className="w-20 h-20 rounded-full object-cover border-2 border-purple-600 shrink-0"
-                onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop';
-                }}
-              />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-600 to-sky-500 text-white font-extrabold text-2xl flex items-center justify-center border-2 border-purple-500 shadow-md shrink-0 tracking-wider select-none">
+                YD
+              </div>
               <div className="space-y-1">
                 <h3 className="font-bold text-base text-udemy-dark">Yogesh Dhiman</h3>
                 <p className="text-xs text-purple-700 font-semibold">
@@ -363,15 +356,15 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
               Yogesh Dhiman is an accomplished IT professional, Cloud Solutions Architect, and acclaimed Udemy instructor specializing in cloud certifications (AWS, Azure, GCP), cybersecurity, and test automation. With extensive hands-on enterprise experience, Yogesh is dedicated to making exam preparation practical, accessible, and affordable.
             </p>
 
-            <a
-              href="https://www.udemy.com/user/yogesh-dhiman-22/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-md transition"
-            >
-              <span>View Yogesh Dhiman’s Courses on Udemy.com</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('catalog')}
+                className="inline-flex items-center space-x-2 bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-md transition cursor-pointer"
+              >
+                <span>Explore More Practice Tests</span>
+                <BookOpen className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Student Feedback & Reviews Section */}
@@ -439,13 +432,28 @@ export default function ProductDetailPage({ product, onTakeTest, onBack, onNavig
                   </button>
                 </div>
               ) : product.isFree ? (
-                <button
-                  onClick={() => onTakeTest(product, 1)}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-sm"
-                >
-                  <PlayCircle className="w-4 h-4" />
-                  <span>Start Free Diagnostic Test 1</span>
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => onTakeTest(product, 1)}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-sm"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    <span>Start Free Practice Test 1</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!currentUser) {
+                        openLoginModal();
+                        return;
+                      }
+                      enrollProduct(product.id);
+                    }}
+                    className="w-full bg-white hover:bg-purple-50 text-purple-700 border border-purple-300 font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5"
+                  >
+                    <BookOpen className="w-4 h-4 text-purple-600" />
+                    <span>Enroll in Free Course (Save to My Learning)</span>
+                  </button>
+                </div>
               ) : (
                 <>
                   <button

@@ -28,7 +28,9 @@ import {
   XCircle,
   AlertTriangle,
   PlayCircle,
-  Wallet
+  Wallet,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { generateAdminOrderEmailHtml } from '../utils/emailService';
 
@@ -61,15 +63,29 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   // Customer Contact Fields
   const [customerName, setCustomerName] = useState(currentUser?.name || user?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || user?.email || '');
-  const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || user?.phone || '+91-9253330335');
+  const [customerPhone, setCustomerPhone] = useState(
+    currentUser?.phone && currentUser.phone !== '+91-9253330335' ? currentUser.phone : ''
+  );
   const [emailValidationError, setEmailValidationError] = useState(false);
+  const [phoneValidationError, setPhoneValidationError] = useState(false);
+  const [customerPassword, setCustomerPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordValidationError, setPasswordValidationError] = useState(false);
+  const [autoRedirectCountdown, setAutoRedirectCountdown] = useState(3);
+  const [isRedirectPaused, setIsRedirectPaused] = useState(false);
+
+  // Normalized safe contact values available across all handler scopes
+  const cleanPhone = (customerPhone || currentUser?.phone || '').trim();
+  const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
 
   // Update contact info when currentUser changes
   useEffect(() => {
     if (currentUser) {
       setCustomerName(currentUser.name || '');
       setCustomerEmail(currentUser.email || '');
-      if (currentUser.phone) setCustomerPhone(currentUser.phone);
+      if (currentUser.phone && currentUser.phone !== '+91-9253330335') {
+        setCustomerPhone(currentUser.phone);
+      }
     }
   }, [currentUser]);
 
@@ -79,6 +95,30 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       setCheckoutStep(initialStep);
     }
   }, [initialStep]);
+
+  // Auto-redirect to course access page upon verified payment
+  useEffect(() => {
+    if (checkoutStep !== 'success' || !completedOrder || isRedirectPaused) return;
+    const targetCourse = (completedOrder.items && completedOrder.items[0]) || (cart && cart[0]);
+    const fullProduct = products?.find(p => p.id === targetCourse?.id) || targetCourse;
+
+    const timer = setInterval(() => {
+      setAutoRedirectCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (fullProduct && onTakeTest) {
+            onTakeTest(fullProduct);
+          } else if (onNavigate) {
+            onNavigate('mylearning');
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [checkoutStep, completedOrder, isRedirectPaused, cart, products, onTakeTest, onNavigate]);
 
   // Pricing calculations
   const subtotalINR = cart.reduce((sum, item) => sum + (item.priceINR || 0), 0);
@@ -139,10 +179,12 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       currency: 'USD'
     },
     {
-      id: 'gw-upi-direct',
+      id: 'gateway-upi-direct',
       name: 'Instant UPI QR & Direct VPA',
       provider: 'UPI Direct',
-      keyId: 'itpracticetests@okhdfcbank',
+      keyId: '',
+      upiVpa: '',
+      merchantName: 'ITPracticeTests',
       isEnabled: true,
       supportedMethods: ['Google Pay', 'PhonePe', 'Paytm', 'BHIM'],
       currency: 'INR'
@@ -211,21 +253,20 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   const [paypalTab, setPaypalTab] = useState('paypal'); // 'paypal' | 'card' | 'pay_later'
 
   // Direct UPI QR State
-  const [upiUtrInput, setUpiUtrInput] = useState('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [copiedVpa, setCopiedVpa] = useState(false);
   const [orderSessionRef] = useState(() => Math.floor(100000 + Math.random() * 900000).toString());
 
-  const upiVpa = selectedGateway?.upiVpa || selectedGateway?.upi_vpa || 'itpracticetests@okhdfcbank';
-  const payeeName = selectedGateway?.merchantName || 'ITPracticeTests Online Education';
+  const upiVpa = selectedGateway?.upiVpa || selectedGateway?.upi_vpa || '';
+  const payeeName = selectedGateway?.merchantName || selectedGateway?.merchant_name || 'ITPracticeTests';
   const upiAmount = currency === 'INR' ? totalINR : Math.round(totalUSD * 86);
   const upiNote = `ITPT-${orderSessionRef}`;
-  const upiUri = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}&am=${upiAmount}&cu=INR&tn=${encodeURIComponent(upiNote)}`;
+  const upiUri = upiVpa ? `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(payeeName)}&am=${upiAmount}&cu=INR&tn=${encodeURIComponent(upiNote)}` : '';
 
   // Generate UPI QR Code
   useEffect(() => {
     let isMounted = true;
-    if (upiUri && upiAmount > 0) {
+    if (upiUri && upiAmount > 0 && upiVpa) {
       QRCode.toDataURL(upiUri, {
         width: 240,
         margin: 2,
@@ -314,17 +355,32 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
               orderId: activeOrderId,
               paymentId: details.id || data.orderID,
               gatewayProvider: 'PayPal',
-              paypalDetails: details
+              paypalDetails: details,
+              customerEmail: finalEmail,
+              customerName: customerName.trim() || 'Student',
+              customerPhone: cleanPhone,
+              password: customerPassword,
+              items: cart
             });
 
             setIsProcessing(false);
             setVerificationStage('');
 
-            if (verifyRes.success) {
-              setCompletedOrder(verifyRes.order);
+            if (verifyRes && verifyRes.success) {
+              setCompletedOrder(verifyRes.order || {
+                orderId: activeOrderId,
+                status: 'PAID',
+                transactionId: details.id || data.orderID,
+                total: pendingOrderInfo?.total || totalUSD,
+                currency: 'USD',
+                date: new Date().toISOString().split('T')[0],
+                paymentMethod: 'PayPal Verified',
+                customerEmail: finalEmail,
+                items: cart
+              });
               setCheckoutStep('success');
             } else {
-              setPaymentError(verifyRes.error || 'PayPal payment could not be verified by server. Course access was NOT granted.');
+              setPaymentError(verifyRes?.error || 'PayPal payment could not be verified by server. Course access was NOT granted.');
             }
           } catch (err) {
             setIsProcessing(false);
@@ -364,6 +420,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   const handleLaunchPayment = async () => {
     setPaymentError(null);
     setEmailValidationError(false);
+    setPhoneValidationError(false);
 
     // 1. Email Validation (Guest or Logged in user)
     const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
@@ -378,20 +435,49 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       return;
     }
 
+    // 2. Phone Number Validation (Mandatory)
+    const cleanPhone = (customerPhone || '').trim();
+    const digitsOnly = cleanPhone.replace(/\D/g, '');
+    if (!cleanPhone || digitsOnly.length < 7 || digitsOnly.length > 15) {
+      setPhoneValidationError(true);
+      setPaymentError('Please enter a valid phone number (minimum 7 to 15 digits) to proceed with payment.');
+      const phoneEl = document.getElementById('customer-phone-input');
+      if (phoneEl) {
+        phoneEl.focus();
+        phoneEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // 3. Password Validation (Mandatory for Guest checkout so account is created & accessible)
+    if (!currentUser) {
+      if (!customerPassword || customerPassword.trim().length < 6) {
+        setPasswordValidationError(true);
+        setPaymentError('Please enter an account password (minimum 6 characters) so your permanent student account is created upon payment.');
+        const passEl = document.getElementById('customer-password-input');
+        if (passEl) {
+          passEl.focus();
+          passEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+    }
+
     const provider = selectedGateway?.provider || selectedProvider || 'Razorpay';
     const payCurrency = provider === 'PayPal' ? 'USD' : (currency || 'INR');
 
     setIsProcessing(true);
     setVerificationStage(`Creating secure pending order for ${provider}...`);
 
-    // 2. Step 1: Create PENDING order on backend with canonical catalog prices
+    // 4. Step 1: Create PENDING order on backend with canonical catalog prices
     const orderRes = await createPendingOrder({
       items: cart,
       currency: payCurrency,
       customerName: customerName.trim() || 'Valued Learner',
       customerEmail: finalEmail,
-      customerPhone,
-      gatewayProvider: provider
+      customerPhone: cleanPhone,
+      gatewayProvider: provider,
+      password: customerPassword
     });
 
     if (!orderRes.success) {
@@ -425,10 +511,10 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
       setShowCashfreeModal(true);
     } else if (provider === 'PayU') {
       setShowPayuModal(true);
-    } else if (provider === 'CCAvenue') {
-      setShowCcavenueModal(true);
     } else if (provider === 'UPI Direct' || provider.toLowerCase().includes('upi')) {
-      setShowUpiModal(true);
+      // Direct live UPI gateway with dynamic UPI QR code & UPI app detection (Google Pay / PhonePe / Paytm / BHIM)
+      // Automatically listens for live bank settlement and redirects to course access page upon verified payment
+      await launchRazorpayModal(orderRes, finalEmail, 'upi');
     } else {
       const gwPaymentLink = selectedGateway?.paymentLink || selectedGateway?.payment_link;
       const coursePaymentLink = cart[0]?.paymentLink || cart[0]?.paymentLinks?.[provider.toLowerCase()];
@@ -444,7 +530,8 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
   // Verify payment completed via direct payment link
   const handleVerifyPaymentLinkSubmit = async () => {
-    if (!paymentRefInput.trim()) {
+    const ref = paymentRefInput.trim();
+    if (!ref) {
       setRefVerifyError('Please enter your payment reference, transaction ID, or UPI UTR number.');
       return;
     }
@@ -452,24 +539,47 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     setIsVerifyingRef(true);
     setRefVerifyError(null);
 
+    const safeEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
     const activeOrderId = pendingOrderInfo?.orderId || `ITPT-ORD-${Date.now()}`;
     const provider = selectedGateway?.provider || selectedProvider || 'Razorpay';
 
-    const verifyRes = await verifyPaidOrder({
-      orderId: activeOrderId,
-      paymentId: paymentRefInput.trim(),
-      utrNumber: paymentRefInput.trim(),
-      gatewayProvider: provider
-    });
+    try {
+      const verifyRes = await verifyPaidOrder({
+        orderId: activeOrderId,
+        paymentId: ref,
+        utrNumber: ref,
+        gatewayProvider: provider,
+        customerEmail: safeEmail,
+        customerName: customerName.trim() || 'Student',
+        customerPhone: (customerPhone || cleanPhone || '').trim(),
+        password: customerPassword || 'student123',
+        items: cart
+      });
 
-    setIsVerifyingRef(false);
+      setIsVerifyingRef(false);
 
-    if (verifyRes.success && (verifyRes.order?.status === 'PAID' || verifyRes.status === 'PAID')) {
-      setShowPaymentLinkModal(false);
-      setCompletedOrder(verifyRes.order);
-      setCheckoutStep('success');
-    } else {
-      setRefVerifyError(verifyRes.error || 'Server could not verify payment. Please confirm your transaction ID.');
+      if (verifyRes && verifyRes.success && (verifyRes.order?.status === 'PAID' || verifyRes.status === 'PAID')) {
+        setShowPaymentLinkModal(false);
+        const finalized = verifyRes.order || {
+          orderId: activeOrderId,
+          status: 'PAID',
+          transactionId: ref,
+          total: totalINR,
+          currency: currency || 'INR',
+          date: new Date().toISOString().split('T')[0],
+          paymentMethod: `${provider} Reference Verified`,
+          customerEmail: safeEmail,
+          items: cart
+        };
+        setCompletedOrder(finalized);
+        setCheckoutStep('success');
+      } else {
+        setRefVerifyError(verifyRes?.error || 'Server could not verify payment. Please confirm your transaction ID.');
+      }
+    } catch (err) {
+      console.error('[Payment Link Verification Error]:', err);
+      setIsVerifyingRef(false);
+      setRefVerifyError(`Verification error: ${err.message || 'Network error verifying transaction'}`);
     }
   };
 
@@ -492,7 +602,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     const prefillData = {
       name: customerName.trim() || 'Valued Learner',
       email: finalEmail,
-      contact: customerPhone || '+91-9253330335'
+      contact: (customerPhone || '').trim()
     };
 
     if (preferredMethod) {
@@ -514,22 +624,44 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
         setIsProcessing(true);
         setVerificationStage('Verifying cryptographic HMAC signature with security server...');
 
-        const verifyRes = await verifyPaidOrder({
-          orderId: orderRes.orderId,
-          paymentId: response.razorpay_payment_id,
-          gatewayOrderId: response.razorpay_order_id,
-          signature: response.razorpay_signature,
-          gatewayProvider: 'Razorpay'
-        });
+        try {
+          const verifyRes = await verifyPaidOrder({
+            orderId: orderRes.orderId,
+            paymentId: response.razorpay_payment_id,
+            gatewayOrderId: response.razorpay_order_id,
+            signature: response.razorpay_signature,
+            gatewayProvider: 'Razorpay',
+            customerEmail: finalEmail,
+            customerName: customerName.trim() || 'Student',
+            customerPhone: (customerPhone || cleanPhone || '').trim(),
+            password: customerPassword || 'student123',
+            items: cart
+          });
 
-        setIsProcessing(false);
-        setVerificationStage('');
+          setIsProcessing(false);
+          setVerificationStage('');
 
-        if (verifyRes.success) {
-          setCompletedOrder(verifyRes.order);
-          setCheckoutStep('success');
-        } else {
-          setPaymentError(verifyRes.error || 'Server payment verification failed. Course access was NOT granted.');
+          if (verifyRes && verifyRes.success) {
+            setCompletedOrder(verifyRes.order || {
+              orderId: orderRes.orderId,
+              status: 'PAID',
+              transactionId: response.razorpay_payment_id,
+              total: orderRes.total || totalINR,
+              currency: 'INR',
+              date: new Date().toISOString().split('T')[0],
+              paymentMethod: 'Razorpay Verified',
+              customerEmail: finalEmail,
+              items: cart
+            });
+            setCheckoutStep('success');
+          } else {
+            setPaymentError(verifyRes?.error || 'Server payment verification failed. Course access was NOT granted.');
+          }
+        } catch (err) {
+          console.error('[Razorpay Handler Error]:', err);
+          setIsProcessing(false);
+          setVerificationStage('');
+          setPaymentError(`Payment confirmation error: ${err.message}`);
         }
       },
       modal: {
@@ -713,54 +845,45 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
     }
   };
 
-  // Direct UPI Settlement Verification Handler
+  // Direct UPI Settlement Handler - Connects to live UPI Gateway for verified bank payment
   const handleVerifyUpiPayment = async () => {
     setPaymentError(null);
-    if (!upiUtrInput.trim() || upiUtrInput.trim().length < 6) {
-      setPaymentError('Please enter the 12-digit UPI Reference Number / UTR from your payment app (Google Pay / PhonePe / Paytm).');
-      return;
-    }
 
-    const finalEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
-    if (!finalEmail || !finalEmail.includes('@')) {
+    const safeEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
+    if (!safeEmail || !safeEmail.includes('@')) {
       setPaymentError('Please enter a valid email address.');
       return;
     }
 
     setShowUpiModal(false);
     setIsProcessing(true);
-    setVerificationStage('Creating pending order and verifying UPI settlement with bank...');
+    setVerificationStage('Connecting to secure live UPI gateway...');
 
-    const orderRes = pendingOrderInfo || (await createPendingOrder({
-      items: cart,
-      currency: 'INR',
-      customerName: customerName.trim() || 'Valued Learner',
-      customerEmail: finalEmail,
-      customerPhone,
-      gatewayProvider: 'UPI Direct'
-    }));
+    try {
+      const orderRes = pendingOrderInfo || (await createPendingOrder({
+        items: cart,
+        currency: 'INR',
+        customerName: customerName.trim() || 'Valued Learner',
+        customerEmail: safeEmail,
+        customerPhone: (customerPhone || cleanPhone || '').trim(),
+        password: customerPassword || 'student123',
+        gatewayProvider: 'Razorpay'
+      }));
 
-    if (!orderRes.success) {
+      if (!orderRes || !orderRes.success) {
+        setIsProcessing(false);
+        setVerificationStage('');
+        setPaymentError(orderRes?.error || 'Failed to initialize pending order.');
+        return;
+      }
+
+      setPendingOrderInfo(orderRes);
+      await launchRazorpayModal(orderRes, safeEmail, 'upi');
+    } catch (err) {
+      console.error('[UPI Verification Exception]:', err);
       setIsProcessing(false);
-      setPaymentError(orderRes.error || 'Failed to initialize pending order.');
-      return;
-    }
-
-    const verifyRes = await verifyPaidOrder({
-      orderId: orderRes.orderId,
-      paymentId: `UPI-${upiUtrInput.trim()}`,
-      utrNumber: upiUtrInput.trim(),
-      gatewayProvider: 'UPI Direct'
-    });
-
-    setIsProcessing(false);
-    setVerificationStage('');
-
-    if (verifyRes.success) {
-      setCompletedOrder(verifyRes.order);
-      setCheckoutStep('success');
-    } else {
-      setPaymentError(verifyRes.error || 'UPI settlement could not be verified. Course access was NOT granted.');
+      setVerificationStage('');
+      setPaymentError(`Verification error: ${err.message || 'Unable to connect to verification server'}.`);
     }
   };
 
@@ -774,10 +897,65 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
   // -------------------------------------------------------------
   // STEP 3: ORDER SUCCESS & TAX INVOICE RECEIPT
   // -------------------------------------------------------------
-  if (checkoutStep === 'success' && completedOrder && completedOrder.status === 'PAID') {
+  if (checkoutStep === 'success' && completedOrder && (completedOrder.status === 'PAID' || completedOrder.status === 'paid' || completedOrder.orderId)) {
+    const targetCourse = (completedOrder.items && completedOrder.items[0]) || (cart && cart[0]);
+    const fullProduct = products?.find(p => p.id === targetCourse?.id) || targetCourse;
+
     return (
       <div className="min-h-screen bg-[#f7f9fa] py-12 px-4 font-sans">
         <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-udemy-border p-8 shadow-card space-y-6 text-center animate-fadeIn">
+          {/* Automated Course Access Instant Redirect Banner */}
+          <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white rounded-2xl p-5 shadow-lg space-y-3 text-left">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <PlayCircle className="w-5 h-5 animate-pulse text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">
+                    Redirecting to Your Course Access Page...
+                  </h3>
+                  <p className="text-xs text-purple-200">
+                    Your lifetime course enrollment is unlocked! Launching in <strong className="text-amber-300 font-mono text-sm">{autoRedirectCountdown}s</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRedirectPaused(p => !p)}
+                className="text-[11px] bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
+              >
+                {isRedirectPaused ? 'Resume Auto-Redirect' : 'Pause'}
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (fullProduct && onTakeTest) {
+                    onTakeTest(fullProduct);
+                  } else if (onNavigate) {
+                    onNavigate('mylearning');
+                  }
+                }}
+                className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                <PlayCircle className="w-4 h-4 text-slate-950" />
+                <span>Start Practice Test Now (Direct Access)</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('mylearning')}
+                className="bg-white/15 hover:bg-white/25 text-white font-bold text-xs py-3 px-4 rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <span>My Learning Portal</span>
+              </button>
+            </div>
+          </div>
+
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-inner">
             <CheckCircle className="w-10 h-10" />
           </div>
@@ -889,20 +1067,34 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
             </div>
           </div>
 
-          <div className="flex items-center justify-center space-x-4 pt-2">
-            {completedOrder.items && completedOrder.items[0] && (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            {fullProduct && (
               <button
                 type="button"
-                onClick={() => onTakeTest(completedOrder.items[0])}
-                className="bg-udemy-purple hover:bg-udemy-purple-hover text-white text-xs font-bold px-6 py-3 rounded-lg shadow-sm transition cursor-pointer"
+                onClick={() => {
+                  if (onTakeTest) {
+                    onTakeTest(fullProduct);
+                  } else if (onNavigate) {
+                    onNavigate('mylearning');
+                  }
+                }}
+                className="w-full sm:w-auto bg-udemy-purple hover:bg-udemy-purple-hover text-white text-xs font-bold px-6 py-3 rounded-xl shadow-sm transition cursor-pointer flex items-center justify-center space-x-2"
               >
-                Start Practice Test Now
+                <PlayCircle className="w-4 h-4 text-purple-200" />
+                <span>Start Practice Test Now</span>
               </button>
             )}
             <button
               type="button"
+              onClick={() => onNavigate && onNavigate('mylearning')}
+              className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white text-xs font-bold px-5 py-3 rounded-xl shadow-sm transition cursor-pointer flex items-center justify-center space-x-1.5"
+            >
+              <span>Go to My Learning</span>
+            </button>
+            <button
+              type="button"
               onClick={onContinueShopping}
-              className="border border-slate-300 text-slate-700 text-xs font-semibold px-4 py-3 rounded-lg hover:bg-slate-50 transition cursor-pointer"
+              className="w-full sm:w-auto border border-slate-300 text-slate-700 text-xs font-semibold px-4 py-3 rounded-xl hover:bg-slate-50 transition cursor-pointer"
             >
               Back to Catalog
             </button>
@@ -1198,20 +1390,93 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 font-bold mb-1">Phone Number (Optional)</label>
+                      <label htmlFor="customer-phone-input" className="block text-gray-700 font-bold mb-1">
+                        Phone Number <span className="text-rose-600">*</span>
+                      </label>
                       <input
+                        id="customer-phone-input"
                         type="tel"
+                        required
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="+91-9253330335"
-                        className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        onChange={(e) => {
+                          setCustomerPhone(e.target.value);
+                          if (phoneValidationError) setPhoneValidationError(false);
+                          if (paymentError) setPaymentError(null);
+                        }}
+                        placeholder="e.g. +91 98765 43210"
+                        className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none transition ${
+                          phoneValidationError
+                            ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30'
+                            : 'border-slate-300 focus:ring-2 focus:ring-purple-500'
+                        }`}
                       />
+                      {phoneValidationError ? (
+                        <span className="text-[11px] text-rose-600 font-bold mt-1 block">
+                          ⚠️ Phone number is required to proceed with payment and order confirmation.
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-500 mt-0.5 block">
+                          Required for SMS order updates, payment receipt, and instant course access.
+                        </span>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-gray-700 font-bold mb-1">Billing Country</label>
-                      <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium">
-                        {currency === 'INR' ? 'India (GST Included: 03AKXPD3010G1ZM)' : 'Global / International (USD)'}
+                    {!currentUser && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor="customer-password-input" className="block text-gray-700 font-bold">
+                            Account Password <span className="text-rose-600">*</span>
+                          </label>
+                          <span className="text-[10px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                            Permanent Login
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            id="customer-password-input"
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={customerPassword}
+                            onChange={(e) => {
+                              setCustomerPassword(e.target.value);
+                              if (passwordValidationError) setPasswordValidationError(false);
+                              if (paymentError) setPaymentError(null);
+                            }}
+                            placeholder="Create password (min 6 characters)"
+                            className={`w-full pl-3.5 pr-10 py-2.5 border rounded-xl focus:outline-none transition ${
+                              passwordValidationError
+                                ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30'
+                                : 'border-slate-300 focus:ring-2 focus:ring-purple-500'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {passwordValidationError ? (
+                          <span className="text-[11px] text-rose-600 font-bold mt-1 block">
+                            ⚠️ Password must be at least 6 characters so you can log in after payment.
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-500 mt-0.5 block">
+                            Your student account will be automatically created &amp; logged in upon payment.
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className={!currentUser ? 'md:col-span-2' : ''}>
+                      <label className="block text-gray-700 font-bold mb-1">Billing Country &amp; License</label>
+                      <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                        <span>{currency === 'INR' ? 'India (GST Included: 03AKXPD3010G1ZM)' : 'Global / International (USD)'}</span>
+                        <span className="text-emerald-700 font-bold flex items-center space-x-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Lifetime Course Access License</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1513,9 +1778,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 0. OFFICIAL PAYMENT LINK & VERIFICATION MODAL */}
         {showPaymentLinkModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
-              <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center font-bold text-white text-xs">
                     {(selectedGateway.provider || 'GW').slice(0, 2).toUpperCase()}
@@ -1536,7 +1801,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 {/* Order Info Card */}
                 <div className="bg-purple-50/50 border border-purple-200/80 rounded-xl p-4 space-y-2 text-xs">
                   <div className="flex justify-between items-center text-slate-600">
@@ -1693,9 +1958,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 2. OFFICIAL PAYPAL MODAL */}
         {showPaypalModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
-              <div className="bg-[#003087] text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-[#003087] text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2.5">
                   <span className="font-extrabold italic text-xl tracking-tight text-white">
                     Pay<span className="text-[#0079C1]">Pal</span>
@@ -1715,7 +1980,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 font-medium">Merchant Payee:</span>
@@ -1779,9 +2044,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 3. OFFICIAL CASHFREE PAYMENTS MODAL */}
         {showCashfreeModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
-              <div className="bg-[#0A102E] text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-[#0A102E] text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-400 to-rose-500 flex items-center justify-center font-black text-xs text-slate-900">
                     CF
@@ -1803,7 +2068,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 font-medium">App ID:</span>
@@ -1953,9 +2218,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 4. OFFICIAL PAYU BIZ INDIA MODAL */}
         {showPayuModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
-              <div className="bg-[#1A1F2C] text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-[#1A1F2C] text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center font-black text-xs text-white">
                     PayU
@@ -1977,7 +2242,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 font-medium">Merchant Key:</span>
@@ -2118,9 +2383,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 5. OFFICIAL CCAVENUE MODAL */}
         {showCcavenueModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0">
-              <div className="bg-[#0b2447] text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-[#0b2447] text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-7 h-7 rounded-lg bg-amber-400 flex items-center justify-center font-black text-xs text-slate-900">
                     CCA
@@ -2142,7 +2407,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 overflow-y-auto">
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 font-medium">Session Ref:</span>
@@ -2276,9 +2541,9 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
 
         {/* 6. OFFICIAL UPI MODAL */}
         {showUpiModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 text-center">
-              <div className="bg-purple-900 text-white p-4 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 space-y-0 text-center max-h-[92vh] flex flex-col my-auto">
+              <div className="bg-purple-900 text-white p-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2 text-left">
                   <QrCode className="w-5 h-5 text-purple-300" />
                   <div>
@@ -2298,7 +2563,7 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                 </button>
               </div>
 
-              <div className="p-6 space-y-4 text-center">
+              <div className="p-6 space-y-4 text-center overflow-y-auto">
                 <p className="text-xs text-slate-600">
                   Scan this QR code with any UPI app to pay <strong>₹{upiAmount}</strong>.
                 </p>
@@ -2332,30 +2597,48 @@ export default function CartPage({ onContinueShopping, onTakeTest, onNavigate, i
                   </button>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2">
-                  <label className="block text-xs font-bold text-slate-800">
-                    Enter 12-Digit UPI Reference / UTR Number:
-                  </label>
-                  <input
-                    type="text"
-                    value={upiUtrInput}
-                    onChange={(e) => setUpiUtrInput(e.target.value.replace(/\D/g, ''))}
-                    maxLength={16}
-                    placeholder="e.g. 428190214812"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  />
-                  <p className="text-[10px] text-gray-500">
-                    Once verified server-side with bank settlement records, your course unlocks immediately.
+                {upiUri && (
+                  <a
+                    href={upiUri}
+                    className="sm:hidden block w-full bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs py-2.5 rounded-xl transition text-center shadow-xs"
+                  >
+                    📱 Pay via UPI App (GPay / PhonePe / Paytm / BHIM)
+                  </a>
+                )}
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center space-y-2">
+                  <div className="flex items-center justify-center space-x-2 text-slate-800 font-bold text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span>Awaiting Live Bank Payment Confirmation...</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Scan with any UPI app (Google Pay, PhonePe, Paytm, BHIM) to pay <strong>₹{upiAmount}</strong>. As soon as your payment is verified with bank settlement records, you will be automatically redirected to your course access page.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleVerifyUpiPayment}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer"
+                  onClick={async () => {
+                    setShowUpiModal(false);
+                    const safeEmail = (customerEmail || currentUser?.email || '').trim().toLowerCase();
+                    const orderRes = pendingOrderInfo || (await createPendingOrder({
+                      items: cart,
+                      currency: 'INR',
+                      customerName: customerName.trim() || 'Valued Learner',
+                      customerEmail: safeEmail,
+                      customerPhone: (customerPhone || cleanPhone || '').trim(),
+                      password: customerPassword || 'student123',
+                      gatewayProvider: 'Razorpay'
+                    }));
+                    if (orderRes && orderRes.success) {
+                      setPendingOrderInfo(orderRes);
+                      await launchRazorpayModal(orderRes, safeEmail, 'upi');
+                    }
+                  }}
+                  className="w-full bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Verify Settlement &amp; Unlock Access</span>
+                  <Lock className="w-4 h-4 text-purple-200" />
+                  <span>Pay ₹{upiAmount} via Verified UPI Gateway (Auto-Redirect)</span>
                 </button>
               </div>
             </div>

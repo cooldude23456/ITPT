@@ -3,6 +3,8 @@ import { AppProvider, useApp } from './context/AppContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
+import CookieConsentBanner from './components/CookieConsentBanner';
+import { FloatingQuickConnect } from './components/SocialLinks';
 import HomePage from './pages/HomePage';
 import CatalogPage from './pages/CatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -30,10 +32,10 @@ function MainApp() {
   const [activeTestNumber, setActiveTestNumber] = useState(1);
   const [currentAttempt, setCurrentAttempt] = useState(null);
 
-  // Scroll to top whenever view changes
+  // Scroll to top instantly whenever view or active product changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView, selectedProduct, activeTestProduct, currentAttempt, activeTestNumber]);
+    window.scrollTo(0, 0);
+  }, [currentView, selectedProduct?.id]);
 
   // Stealth Security Portal & Secret Hotkey Listener
   useEffect(() => {
@@ -73,6 +75,13 @@ function MainApp() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentUser, openLoginModal]);
+
+  // Automatically redirect to home if user logs out or loses admin authorization
+  useEffect(() => {
+    if (currentView === 'admin' && currentUser?.role !== 'admin') {
+      setCurrentView('home');
+    }
+  }, [currentView, currentUser]);
 
   // Navigation handlers
   const handleSelectProduct = (product) => {
@@ -191,21 +200,11 @@ function MainApp() {
           currentUser?.role === 'admin' ? (
             <AdminPanelPage onSelectProduct={handleSelectProduct} />
           ) : (
-            <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4 font-sans animate-fadeIn">
-              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-3xl font-black text-slate-400">
-                404
-              </div>
-              <h1 className="text-2xl font-black text-slate-800">Page Not Found</h1>
-              <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                The requested URL or resource was not found on this server. Please check the address or return to the course catalog.
-              </p>
-              <button
-                onClick={() => setCurrentView('home')}
-                className="mt-2 px-6 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition shadow-sm"
-              >
-                Return to Home
-              </button>
-            </div>
+            <HomePage
+              onSelectProduct={handleSelectProduct}
+              onTakeTest={handleTakeTest}
+              onNavigateCategory={handleNavigateCategory}
+            />
           )
         )}
 
@@ -268,14 +267,73 @@ function MainApp() {
           }
         }}
       />
+
+      {/* Floating Quick Connect (WhatsApp & Telegram Support) */}
+      {currentView !== 'test-player' && <FloatingQuickConnect />}
+
+      {/* Cookie & Privacy Consent Banner */}
+      <CookieConsentBanner onNavigate={setCurrentView} />
     </div>
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[ITPT Critical Error Caught]:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 bg-purple-600/30 text-purple-400 rounded-2xl flex items-center justify-center mb-4 border border-purple-500/40">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h1 className="text-2xl font-extrabold mb-2">Something went wrong while loading the page</h1>
+          <p className="text-slate-400 text-sm max-w-md mb-6">
+            A temporary script error occurred. Please click the button below to reload and restore normal application state.
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                try { localStorage.clear(); } catch(e) {}
+                window.location.reload();
+              }}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-xl transition cursor-pointer text-sm"
+            >
+              Clear Cache &amp; Reload
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-2.5 rounded-xl transition cursor-pointer text-sm"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

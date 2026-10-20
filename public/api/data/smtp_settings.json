@@ -1,0 +1,17 @@
+{
+  "smtpHost": "smtp.hostinger.com",
+  "smtpPort": 465,
+  "smtpSecure": true,
+  "smtpUser": "",
+  "smtpPass": "",
+  "senderName": "ITPracticeTests Orders",
+  "senderEmail": "orders@itpracticetests.com",
+  "primaryAdminEmail": "support@itpracticetests.com",
+  "secondaryAdminEmail": "rath.sanjiv.rath@gmail.com",
+  "enableInstantEmail": true,
+  "instructorName": "Yogesh Dhiman",
+  "businessName": "ITPracticeTests",
+  "gstNumber": "03AKXPD3010G1ZM",
+  "officeAddress": "Office No. 715, 7th Floor, Block D&E, CCC, VIP Road, Zirakpur, Punjab, India – 140603",
+  "supportPhone": "+91-9253330335"
+}

@@ -25,6 +25,7 @@ import {
   Newspaper,
   Layers
 } from 'lucide-react';
+import SocialLinksBar from './SocialLinks';
 
 export default function Header({ currentView, setCurrentView, onSelectProduct }) {
   const {
@@ -67,6 +68,20 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleLogout = () => {
+    logoutUser();
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
+    if (setCurrentView) {
+      setCurrentView('home');
+    }
+    try {
+      if (window.location.hash === '#management-console' || window.location.hash === '#secret-admin-ops') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch (e) {}
+  };
+
   const searchSuggestions = [
     { label: 'AWS SAA-C03 Solutions Architect', category: 'certifications' },
     { label: 'Microsoft Azure AZ-500 Security', category: 'certifications' },
@@ -98,8 +113,7 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
     { id: 'certifications', name: 'IT Certification Practice Tests', icon: '🏆', desc: 'AWS, Azure, GCP, CompTIA, CKA' },
     { id: 'courses', name: 'Online Courses & Masterclasses', icon: '🎥', desc: 'Video lectures & hands-on modules' },
     { id: 'interviews', name: 'IT Interview Practice Tests', icon: '💼', desc: 'Java, Selenium, Python, DevSecOps' },
-    { id: 'free', name: 'Free Practice Tests', icon: '🎁', desc: '100% Free diagnostic exams' },
-    { id: 'cbse', name: 'CBSE Chapter Notes', icon: '📚', desc: 'High school CS & IP revision packs' }
+    { id: 'free', name: 'Free Practice Tests', icon: '🎁', desc: '100% Free diagnostic exams' }
   ];
 
   const isAdmin = currentUser?.role === 'admin';
@@ -114,7 +128,7 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
               Special Offer
             </span>
             <span className="font-medium truncate">
-              🎯 IT Certification Tests & Interview Question Banks at ₹399 / $4.99! Prepared by Udemy Instructor Yogesh Dhiman.
+              🎯 IT Certification Tests & Interview Question Banks at ₹399 / $4.99! Prepared by Lead Instructor Yogesh Dhiman.
             </span>
           </div>
           <div className="hidden md:flex items-center space-x-4 shrink-0 text-[11px] font-medium text-slate-200">
@@ -127,16 +141,11 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
               <span>Currency:</span>
               <strong className="text-white">{currency === 'INR' ? '₹ INR (India)' : '$ USD (Global)'}</strong>
             </button>
-            <span className="text-white/40">|</span>
-            <a
-              href="https://www.udemy.com/user/yogesh-dhiman-22/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1 text-purple-200 hover:text-white transition"
-            >
-              <span>Udemy Profile</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            <span className="text-white/30">|</span>
+            <div className="flex items-center space-x-2" title="Follow ITPracticeTests on Official Social Media Channels">
+              <span className="text-slate-300 text-[10px]">Follow:</span>
+              <SocialLinksBar variant="header" />
+            </div>
           </div>
         </div>
       </div>
@@ -205,15 +214,17 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
                 </button>
               ))}
               <div className="border-t border-slate-100 mt-1 pt-1 px-3">
-                <a
-                  href="https://www.udemy.com/user/yogesh-dhiman-22/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between w-full py-2 text-xs font-semibold text-purple-700 hover:text-purple-900"
+                <button
+                  onClick={() => {
+                    setCurrentView('catalog');
+                    setSelectedCategory('all');
+                    setCategoriesOpen(false);
+                  }}
+                  className="flex items-center justify-between w-full py-2 text-xs font-semibold text-purple-700 hover:text-purple-900 cursor-pointer"
                 >
-                  <span>Visit Yogesh Dhiman on Udemy</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                  <span>Browse All Practice Tests</span>
+                  <BookOpen className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           )}
@@ -478,11 +489,8 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
 
                   <div className="border-t border-slate-100 pt-1 mt-1">
                     <button
-                      onClick={() => {
-                        logoutUser();
-                        setUserDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center space-x-2"
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center space-x-2 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Log Out</span>
@@ -510,8 +518,8 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
                 </div>
               </div>
               <button
-                onClick={logoutUser}
-                className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-1 rounded"
+                onClick={handleLogout}
+                className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-1 rounded cursor-pointer"
               >
                 Log Out
               </button>
@@ -612,6 +620,13 @@ export default function Header({ currentView, setCurrentView, onSelectProduct })
                 {cart.length}
               </span>
             </button>
+
+            <div className="pt-3 border-t border-slate-100">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Official Social Channels
+              </div>
+              <SocialLinksBar variant="header" className="flex-wrap gap-2" />
+            </div>
           </div>
         </div>
       )}

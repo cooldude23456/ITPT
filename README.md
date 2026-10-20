@@ -7,7 +7,7 @@ A modern, responsive, high-performance online education web platform modeled aft
 - **Student Registration & Login**: Full auth system supporting registration, login, profile management, and persistent sessions.
 - **Super Admin Control Center**: Dedicated admin panel to manage 162+ courses, add & configure payment gateways, manage registered students, view order ledgers with GST invoices, and create discount coupons.
 - **Payment Gateway Management**: Configure Razorpay, Cashfree, PayPal, PayU, CCAvenue, and direct UPI QR with sandbox/production toggles and connection ping test.
-- **Udemy Profile Integration**: Direct links and instructor spotlight for [Yogesh Dhiman on Udemy](https://www.udemy.com/user/yogesh-dhiman-22/).
+- **Instructor Spotlight**: Instructor spotlight and course authoring by Yogesh Dhiman.
 - **162+ Products Catalog**: Real certification practice tests, online courses, interview question banks, and CBSE chapter notes.
   - **Vendors**: AWS, Microsoft Azure, Google Cloud (GCP), CompTIA, Kubernetes (CKA/CKAD), Databricks, Cisco, Terraform, Linux Foundation, Snowflake, and more.
 - **Dual Currency Switcher**: Instant switching between **₹ INR (India)** and **$ USD (Global)** with localized discounted pricing.

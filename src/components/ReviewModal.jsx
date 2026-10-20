@@ -13,11 +13,15 @@ import {
 
 export default function ReviewModal({
   product,
+  productId,
+  productTitle,
   isOpen,
   onClose,
   onSuccess
 }) {
-  const { currentUser, addReview, getUserProductReview } = useApp();
+  const { currentUser, addReview, getUserProductReview, products, openLoginModal } = useApp();
+
+  const resolvedProduct = product || (productId ? (products?.find(p => p.id === productId) || { id: productId, title: productTitle || 'Course Exam Simulator' }) : null);
 
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
@@ -28,8 +32,8 @@ export default function ReviewModal({
 
   // Prepopulate if user already wrote a review
   useEffect(() => {
-    if (product && currentUser) {
-      const existing = getUserProductReview ? getUserProductReview(product.id) : null;
+    if (resolvedProduct && currentUser) {
+      const existing = getUserProductReview ? getUserProductReview(resolvedProduct.id) : null;
       if (existing) {
         setRating(existing.rating || 5);
         setTitle(existing.title || '');
@@ -40,9 +44,9 @@ export default function ReviewModal({
         setComment('');
       }
     }
-  }, [product, currentUser]);
+  }, [resolvedProduct?.id, currentUser]);
 
-  if (!isOpen || !product) return null;
+  if (!isOpen || !resolvedProduct) return null;
 
   const starLabels = {
     1: '1 Star — Poor / Needs major improvements',
@@ -55,6 +59,12 @@ export default function ReviewModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!currentUser) {
+      if (openLoginModal) openLoginModal();
+      setErrorMsg('Please sign in to submit your verified course review.');
+      return;
+    }
 
     if (!rating) {
       setErrorMsg('Please select a star rating (1 to 5 stars).');
@@ -69,7 +79,7 @@ export default function ReviewModal({
     setIsSubmitting(true);
 
     const res = addReview({
-      productId: product.id,
+      productId: resolvedProduct.id,
       rating,
       title: title.trim(),
       comment: comment.trim()
@@ -85,7 +95,7 @@ export default function ReviewModal({
     }
   };
 
-  const existing = getUserProductReview ? getUserProductReview(product.id) : null;
+  const existing = getUserProductReview ? getUserProductReview(resolvedProduct.id) : null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
@@ -100,7 +110,7 @@ export default function ReviewModal({
               {existing ? 'Edit Your Course Rating & Review' : 'Rate & Review this Course'}
             </h3>
             <p className="text-xs text-gray-500 font-medium line-clamp-1">
-              {product.title}
+              {resolvedProduct.title}
             </p>
           </div>
           <button
@@ -111,13 +121,31 @@ export default function ReviewModal({
           </button>
         </div>
 
-        {/* Verified Purchaser Notice */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-center space-x-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="leading-tight">
-            Posting as <strong>{currentUser?.name || 'Verified Learner'}</strong> • Your review will show the <strong>✓ Verified Purchaser</strong> badge.
-          </span>
-        </div>
+        {/* Verified Purchaser Notice / Guest Sign-in */}
+        {!currentUser ? (
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-3.5 text-xs text-purple-900 flex items-center justify-between">
+            <div>
+              <p className="font-bold">Sign in to publish your review</p>
+              <p className="text-[11px] text-purple-700">Link your rating &amp; feedback to your student account.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (openLoginModal) openLoginModal();
+              }}
+              className="bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0"
+            >
+              Sign In
+            </button>
+          </div>
+        ) : (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 flex items-center space-x-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="leading-tight">
+              Posting as <strong>{currentUser?.name || 'Verified Learner'}</strong> • Your review will show the <strong>✓ Verified Purchaser</strong> badge.
+            </span>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="bg-rose-50 border border-rose-300 text-rose-800 p-3 rounded-xl text-xs flex items-center space-x-2">

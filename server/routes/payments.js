@@ -159,6 +159,9 @@ router.post('/orders/create-pending', async (req, res) => {
 
     await insertPendingOrder(newOrder);
 
+    // Admin email notification is deliberately NOT sent for pending/awaiting-payment orders.
+    // Admin receives notification ONLY when the order is successfully paid and verified.
+
     // 7. Get Gateway Configuration (Without leaking secrets to client)
     const gateways = await getActiveGateways();
     const activeGw = gateways.find(g => g.provider?.toLowerCase() === gatewayProvider.toLowerCase()) || gateways[0];
@@ -238,7 +241,8 @@ router.post('/orders/verify-payment', async (req, res) => {
         status: 'PAID',
         orderId: order.orderId,
         transactionId: order.transactionId,
-        enrolledProductIds: enrolled
+        enrolledProductIds: enrolled,
+        order: order
       });
     }
 
@@ -343,12 +347,11 @@ router.post('/orders/verify-payment', async (req, res) => {
         isVerified = false;
       }
     } else if (gatewayProvider.toLowerCase().includes('upi')) {
-      const upiId = (utrNumber || (paymentId?.startsWith('UPI-') ? paymentId.replace('UPI-', '') : paymentId))?.trim();
-      // UPI UTRs must be valid 12-digit numeric references (excluding test numbers like 428190214812)
-      if (upiId && /^\d{12}$/.test(upiId) && upiId !== '428190214812') {
+      const rawUpi = (utrNumber || (paymentId?.startsWith('UPI-') ? paymentId.replace('UPI-', '') : paymentId))?.trim();
+      if (rawUpi && (rawUpi.startsWith('pay_') || (/^\d{12}$/.test(rawUpi) && rawUpi !== '428190214812'))) {
         isVerified = true;
-        finalTxnId = `UTR-${upiId}`;
-        verificationMethod = `UPI Bank UTR Verified (${upiId})`;
+        finalTxnId = rawUpi.startsWith('pay_') ? rawUpi : `UTR-${rawUpi}`;
+        verificationMethod = `UPI Verified Settlement (${finalTxnId})`;
       } else {
         isVerified = false;
       }
@@ -463,6 +466,24 @@ router.post('/webhooks/:gateway', async (req, res) => {
   } catch (err) {
     console.error('[Webhook Error]:', err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// CLIENT TRIGGERED ADMIN NOTIFICATION DISPATCH
+// Endpoint: POST /api/admin/notify-order-email
+// -----------------------------------------------------------------------------
+router.post('/admin/notify-order-email', async (req, res) => {
+  try {
+    const order = req.body.order || req.body;
+    if (!order || (!order.orderId && !order.id)) {
+      return res.status(400).json({ success: false, error: 'Valid order payload required.' });
+    }
+    const result = await sendAdminOrderEmail(order);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('[Notify Order Email Error]:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

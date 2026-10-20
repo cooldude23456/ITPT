@@ -1,0 +1,77 @@
+# ==============================================================================
+# ITPracticeTests.com - Hostinger Production Configuration (.htaccess)
+# Designed for LiteSpeed & Apache Web Servers on Hostinger
+# ==============================================================================
+
+# Ensure index.html is the primary entrypoint
+DirectoryIndex index.html index.php
+
+# Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Force HTTPS for all traffic (Security & Payment Gateway Requirement)
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # 2. Prevent direct access to sensitive files and directories
+  RewriteRule ^api/data/ - [F,L]
+  RewriteRule \.(env|git|gitignore|sql|md|lock)$ - [F,L]
+
+  # 3. Route /api/* requests to PHP API engine (Hostinger Native Backend)
+  RewriteRule ^api/(.*)$ api/index.php?route=$1 [QSA,L]
+
+  # 4. If requested resource is an existing file or directory, serve it directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 5. Single Page Application (SPA) Routing Fallback:
+  # Route all other URLs (e.g. /catalog, /cart, /admin, /quiz) to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Ensure proper MIME types for modern ES modules, styles, and web assets
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType image/svg+xml .svg
+  AddType application/json .json
+  AddType font/woff .woff
+  AddType font/woff2 .woff2
+  AddType image/webp .webp
+</IfModule>
+
+# Browser Caching Directives for Maximum Performance
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 1 month"
+  
+  # HTML & API responses: No cache (always fresh)
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/json "access plus 0 seconds"
+
+  # Static assets: Long cache (bundled with hash fingerprints)
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# Gzip / Deflate Compression for Lightning-Fast Page Loads
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Security Headers & Anti-Clickjacking Directives
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

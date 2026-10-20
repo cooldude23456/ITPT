@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getQuestionsForProduct } from '../data/questionBanks';
 import {
+  isMultiSelectQuestion,
+  normalizeCorrectAnswers,
+  getQuestionExplanation,
+  getOptionExplanations
+} from '../utils/questionUtils';
+import {
   Clock,
   Flag,
   ChevronLeft,
@@ -22,7 +28,10 @@ import {
   Lock,
   ShoppingCart,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Mail,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
 
 export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, onBack }) {
@@ -32,6 +41,7 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
     getCoursePracticeTests,
     currentUser,
     verifyCourseAccess,
+    unlockCourseWithEmail,
     formatPrice,
     addToCart,
     openLoginModal
@@ -40,19 +50,56 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
   const isFreeCourse = Boolean(
     product.isFree ||
     product.priceINR === 0 ||
-    product.priceUSD === 0 ||
-    product.id === 'free-az900-diagnostic' ||
-    product.id === '943fcd85-67de-4414-82ef-49fb24be3f74' ||
-    product.id === '6804711e-87c7-4bae-a41a-6d80ba4a8f34'
+    product.priceUSD === 0
   );
 
   const [accessState, setAccessState] = useState(() => (isFreeCourse ? 'authorized' : 'checking'));
   const [accessErrorMsg, setAccessErrorMsg] = useState('');
+  const [quickUnlockEmail, setQuickUnlockEmail] = useState(() => currentUser?.email || '');
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [quickUnlockStatus, setQuickUnlockStatus] = useState(null);
+
+  // Synchronize email input if currentUser changes
+  useEffect(() => {
+    if (currentUser?.email && !quickUnlockEmail) {
+      setQuickUnlockEmail(currentUser.email);
+    }
+  }, [currentUser?.email]);
+
+  const handleQuickUnlock = async (e) => {
+    if (e) e.preventDefault();
+    const clean = (quickUnlockEmail || '').trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      setQuickUnlockStatus({ success: false, message: 'Please enter the email address used during payment.' });
+      return;
+    }
+    setIsUnlocking(true);
+    setQuickUnlockStatus(null);
+    try {
+      if (unlockCourseWithEmail) {
+        const res = await unlockCourseWithEmail(clean, product.id);
+        if (res.success) {
+          setQuickUnlockStatus({ success: true, message: res.message || 'Lifetime access verified successfully!' });
+          setTimeout(() => {
+            setAccessState('authorized');
+          }, 600);
+        } else {
+          setQuickUnlockStatus({ success: false, message: res.message || 'No verified purchase found for this email.' });
+        }
+      } else {
+        setQuickUnlockStatus({ success: false, message: 'Verification service unavailable.' });
+      }
+    } catch (err) {
+      setQuickUnlockStatus({ success: false, message: err?.message || 'Verification error occurred.' });
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
 
   // Zero-Trust Server Access Verification
   useEffect(() => {
     let isMounted = true;
-    if (isFreeCourse) {
+    if (isFreeCourse || currentUser?.role === 'admin') {
       setAccessState('authorized');
       return;
     }
@@ -195,11 +242,8 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
   const userSelected = selectedAnswers[currentIndex] || [];
   const isFlagged = !!flaggedQuestions[currentIndex];
 
-  // Respect uploaded "Question Type" (Multi-select vs Multi-choice)
-  const isMultiple =
-    currentQuestion?.questionType === 'Multi-select' ||
-    currentQuestion?.type === 'multiple' ||
-    (currentQuestion?.correctAnswers && currentQuestion.correctAnswers.length > 1);
+  // Respect uploaded "Question Type" (Multi-select vs Multi-choice) using universal helper
+  const isMultiple = isMultiSelectQuestion(currentQuestion);
 
   // Handle option selection
   const handleSelectOption = (optIndex) => {
@@ -232,8 +276,8 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
     const domainStats = {};
 
     questions.forEach((q, idx) => {
-      const userAns = selectedAnswers[idx] || [];
-      const correctAns = q.correctAnswers || [];
+      const userAns = (selectedAnswers[idx] || []).map(Number);
+      const correctAns = normalizeCorrectAnswers(q);
       const domain = q.domain || 'General Exam Objectives';
 
       if (!domainStats[domain]) {
@@ -244,6 +288,7 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
       // Check if user answer matches correct answers exactly
       const isCorrect =
         userAns.length === correctAns.length &&
+        userAns.length > 0 &&
         userAns.every(ans => correctAns.includes(ans));
 
       if (isCorrect) {
@@ -360,23 +405,98 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
             </div>
           </div>
 
-          {/* User Account Context */}
+          {/* User Account Context & Instant Unlock */}
           {currentUser ? (
-            <p className="text-[11px] text-gray-500">
-              Signed in as <strong className="text-slate-800">{currentUser.email}</strong>. If you used a different email to purchase this exam, please switch accounts.
-            </p>
-          ) : (
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-center justify-between">
-              <span>Already purchased with another account?</span>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 flex items-center justify-between">
+              <span className="truncate">
+                Signed in as <strong className="text-slate-900">{currentUser.email}</strong>
+              </span>
               <button
                 type="button"
-                onClick={openLoginModal}
-                className="text-xs font-bold text-purple-700 underline hover:text-purple-900 cursor-pointer"
+                onClick={() => {
+                  setAccessState('checking');
+                  verifyCourseAccess(product.id).then(res => {
+                    if (res?.hasAccess) setAccessState('authorized');
+                    else setAccessState('denied');
+                  });
+                }}
+                className="text-xs font-bold text-purple-700 hover:text-purple-900 underline shrink-0 ml-2 cursor-pointer"
               >
-                Log In
+                Re-check Access
               </button>
             </div>
-          )}
+          ) : null}
+
+          {/* Instant Purchase Email Unlock Gate */}
+          <div className="bg-gradient-to-br from-purple-50/90 to-indigo-50/90 border border-purple-200 rounded-2xl p-4 text-left space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                  <KeyRound className="w-4 h-4 text-purple-600" />
+                  Already Purchased? Instant Lifetime Access
+                </h4>
+                <p className="text-[11px] text-purple-800/80 mt-0.5">
+                  Enter your payment email (e.g. <strong>bestdealsteam@gmail.com</strong>) to verify your order and unlock immediately.
+                </p>
+              </div>
+              {!currentUser && (
+                <button
+                  type="button"
+                  onClick={openLoginModal}
+                  className="text-xs font-bold text-purple-700 underline hover:text-purple-900 shrink-0 cursor-pointer"
+                >
+                  Log In
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleQuickUnlock} className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="email"
+                  value={quickUnlockEmail}
+                  onChange={(e) => setQuickUnlockEmail(e.target.value)}
+                  placeholder="Enter purchase email (e.g. bestdealsteam@gmail.com)"
+                  className="w-full text-xs pl-9 pr-3 py-2.5 bg-white border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 text-slate-800 font-medium"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isUnlocking}
+                className="bg-purple-700 hover:bg-purple-800 disabled:opacity-60 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-sm"
+              >
+                {isUnlocking ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Unlock Course</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {quickUnlockStatus && (
+              <div
+                className={`text-xs p-2.5 rounded-xl flex items-center gap-2 ${
+                  quickUnlockStatus.success
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                {quickUnlockStatus.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span className="font-medium">{quickUnlockStatus.message}</span>
+              </div>
+            )}
+          </div>
 
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -753,7 +873,7 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
               <div>
                 {isMultiple ? (
                   <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-bold">
-                    ☑️ Multi-select Question: Choose ALL correct options
+                    ☑️ Multi-select Question: Choose ALL {normalizeCorrectAnswers(currentQuestion).length} correct options
                   </span>
                 ) : (
                   <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-bold">
@@ -763,7 +883,7 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
               </div>
               {isMultiple && (
                 <span className="text-xs text-purple-800 font-medium">
-                  {userSelected.length} option{userSelected.length === 1 ? '' : 's'} selected
+                  {userSelected.length} of {normalizeCorrectAnswers(currentQuestion).length} selected
                 </span>
               )}
             </div>
@@ -778,7 +898,8 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
               {currentQuestion?.options.map((option, optIdx) => {
                 const isSelected = userSelected.includes(optIdx);
                 const isPracticeRevealed = examMode === 'practice' && revealedInPractice[currentIndex];
-                const isCorrect = currentQuestion.correctAnswers.includes(optIdx);
+                const currentCorrectAnswers = normalizeCorrectAnswers(currentQuestion);
+                const isCorrect = currentCorrectAnswers.includes(optIdx);
 
                 let optionClass = 'border-slate-200 hover:border-purple-300 hover:bg-slate-50';
                 if (isSelected) {
@@ -823,8 +944,8 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
                       )}
                     </div>
                     <div className="text-sm leading-relaxed flex-1">
-                      <span className="font-bold mr-2 text-slate-700">
-                        {String.fromCharCode(65 + optIdx)}.
+                      <span className="font-bold mr-2 text-slate-800">
+                        {String.fromCharCode(65 + optIdx)} ({optIdx + 1}).
                       </span>
                       {option}
                     </div>
@@ -855,31 +976,38 @@ export default function TestPlayerPage({ product, testNumber = 1, onFinishTest, 
                       <BookOpen className="w-4 h-4 text-purple-600" />
                       <span>Detailed Answer Explanation:</span>
                     </div>
-                    <p className="text-xs text-slate-800 leading-relaxed">
-                      {currentQuestion.overallExplanation || currentQuestion.explanation}
+                    <p className="text-xs text-slate-800 leading-relaxed font-normal whitespace-pre-line bg-white p-3 rounded-lg border border-purple-100 shadow-2xs">
+                      {getQuestionExplanation(currentQuestion)}
                     </p>
 
                     {/* Option-by-Option Breakdown */}
-                    {currentQuestion.optionExplanations && currentQuestion.optionExplanations.some(Boolean) && (
-                      <div className="pt-2 border-t border-purple-200/80 space-y-1.5">
-                        <span className="text-[11px] font-bold text-purple-950 uppercase tracking-wider block">
-                          Option-by-Option Analysis:
-                        </span>
-                        {currentQuestion.options.map((opt, i) => {
-                          const exp = currentQuestion.optionExplanations[i];
-                          if (!exp) return null;
-                          const isCorrectChoice = currentQuestion.correctAnswers.includes(i);
-                          return (
-                            <div key={i} className="text-xs flex items-start space-x-1.5">
-                              <span className={`font-bold shrink-0 ${isCorrectChoice ? 'text-emerald-700' : 'text-slate-600'}`}>
-                                Option {String.fromCharCode(65 + i)} {isCorrectChoice ? '(Correct):' : '(Incorrect):'}
-                              </span>
-                              <span className="text-slate-700 leading-snug">{exp}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {(() => {
+                      const optExps = getOptionExplanations(currentQuestion);
+                      if (!optExps || !optExps.some(Boolean)) return null;
+                      return (
+                        <div className="pt-2 border-t border-purple-200/80 space-y-1.5">
+                          <span className="text-[11px] font-bold text-purple-950 uppercase tracking-wider block">
+                            Option-by-Option Analysis:
+                          </span>
+                          {currentQuestion.options.map((opt, i) => {
+                            const exp = optExps[i];
+                            if (!exp) return null;
+                            const currentCorrect = normalizeCorrectAnswers(currentQuestion);
+                            const isCorrectChoice = currentCorrect.includes(i);
+                            return (
+                              <div key={i} className={`text-xs p-2 rounded-lg border flex items-start space-x-1.5 ${
+                                isCorrectChoice ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-white border-slate-200 text-slate-800'
+                              }`}>
+                                <span className={`font-bold shrink-0 ${isCorrectChoice ? 'text-emerald-700' : 'text-slate-600'}`}>
+                                  Option {String.fromCharCode(65 + i)} {isCorrectChoice ? '(Correct):' : '(Incorrect):'}
+                                </span>
+                                <span className="leading-snug flex-1">{exp}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
 
                     {currentQuestion.reference && (
                       <div className="pt-1">

@@ -1,5 +1,42 @@
 [
   {
+    "id": "free-az900-diagnostic",
+    "title": "Microsoft Azure Fundamentals (AZ-900) Mini Mock Test",
+    "slug": "microsoft-azure-fundamentals-az-900-mini-mock-test",
+    "category": "certifications",
+    "vendor": "Microsoft",
+    "priceINR": 0,
+    "originalPriceINR": 0,
+    "priceUSD": 0,
+    "originalPriceUSD": 0,
+    "isFree": true,
+    "isBestseller": false,
+    "isNew": true,
+    "rating": 4.9,
+    "reviewCount": 1420,
+    "reviewsCount": 1420,
+    "studentsCount": 18500,
+    "questionsCount": 50,
+    "testsCount": 1,
+    "durationMinutes": 45,
+    "timeLimitMins": 45,
+    "passingScore": 70,
+    "badge": "Featured Free Exam",
+    "highlights": [
+      "Cloud Concepts & Architectural Components",
+      "Microsoft Entra ID, Governance & Security",
+      "Comprehensive answer explanations & docs citations"
+    ],
+    "description": "Practice the official Microsoft Azure Fundamentals (AZ-900) diagnostic exam simulator with 50 exam questions, comprehensive answer explanations, and direct Microsoft Learn citations.",
+    "features": [
+      "Full-Length Timed Exam Simulation (50 Questions)",
+      "Comprehensive explanations with official Microsoft Learn citations",
+      "Regularly updated to reflect the latest AZ-900 exam objectives",
+      "Instant Diagnostic Scorecard & Weak Area Breakdown",
+      "100% Free Lifetime Access with no credit card required"
+    ]
+  },
+  {
     "id": "15f206c0-8577-431c-83d5-f411f9a763e0",
     "title": "CompTIA SecurityX CAS-005 Practice Tests | 600+ Q&A",
     "slug": "comptia-securityx-cas-005-practice-tests-600-q-a",
@@ -33,7 +70,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -74,7 +110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -115,7 +150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -156,7 +190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -197,7 +230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -238,7 +270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -279,7 +310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -320,7 +350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -361,7 +390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -402,7 +430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -443,7 +470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -484,7 +510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -525,7 +550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -566,7 +590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -607,7 +630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -648,7 +670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -689,7 +710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -730,7 +750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -771,7 +790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -812,7 +830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -853,7 +870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -894,7 +910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -935,7 +950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -976,7 +990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1017,7 +1030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1058,7 +1070,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1099,7 +1110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1140,7 +1150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1181,7 +1190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1222,7 +1230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1263,7 +1270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1304,7 +1310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1345,7 +1350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1386,7 +1390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1427,7 +1430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1468,7 +1470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1509,7 +1510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1550,7 +1550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1591,7 +1590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1632,7 +1630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1673,7 +1670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1714,7 +1710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1755,7 +1750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1796,7 +1790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1837,7 +1830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1878,7 +1870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1919,7 +1910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -1960,7 +1950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2001,7 +1990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2042,7 +2030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2083,7 +2070,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2124,7 +2110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2165,7 +2150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2206,7 +2190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2247,7 +2230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2288,7 +2270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2329,7 +2310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2370,7 +2350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2411,7 +2390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2452,7 +2430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2493,7 +2470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2534,7 +2510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2575,7 +2550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2616,7 +2590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2657,7 +2630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2698,7 +2670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2739,7 +2710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2780,7 +2750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2821,7 +2790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2862,7 +2830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2903,7 +2870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2944,7 +2910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -2985,7 +2950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3026,7 +2990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3067,7 +3030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3108,7 +3070,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3149,130 +3110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "3964d05a-2ba9-4cc9-ada5-10ca5ba32225",
-    "title": "CBSE Class 12 Chemistry Revision Notes with Mindmap - Quick Chapter Revision by ExpertsTeachers",
-    "slug": "cbse-class-12-chemistry-revision-notes-with-mindmap-quick-chapter-revision-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.8,
-    "reviewCount": 2412,
-    "studentsCount": 10544,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Revise effectively with our CBSE Class 12 Chemistry Notes, featuring expert-created summaries and mind maps for quick chapter revision. Master concepts and excel in exams!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "bcbd6815-599a-4be0-972e-c29f731b337b",
-    "title": "CBSE Class 12 English Revision Notes - Quick Revision Chapter Notes with Mindmap by ExpertsTeachers",
-    "slug": "cbse-class-12-english-revision-notes-quick-revision-chapter-notes-with-mindmap-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.9,
-    "reviewCount": 2441,
-    "studentsCount": 10667,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "CBSE Class 12 English Revision Notes - Quick Revision Chapter Notes with Mindmap by ExpertsTeachers help you master your exams efficiently.",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "562769b2-3194-454c-9944-427e4e7b2cd9",
-    "title": "CBSE Class 12 Physical Education Notes - Quick Rehapter Notes with Mindmap by ExpertsTeachers",
-    "slug": "cbse-class-12-physical-education-notes-quick-rehapter-notes-with-mindmap-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.6,
-    "reviewCount": 2470,
-    "studentsCount": 10790,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "CBSE Class 12 Physical Education Notes - Quick Rehapter Notes with Mindmap by ExpertsTeachers will help you master the syllabus effectively.",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3313,7 +3150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3354,7 +3190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3395,7 +3230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3436,171 +3270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "19120dcc-de97-4a55-b2fd-de7a2ed911b9",
-    "title": "Class 10 Science Revision Notes with Mindmap - Quick Revision Chapter Notes by ExpertsTeachers",
-    "slug": "class-10-science-revision-notes-with-mindmap-quick-revision-chapter-notes-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": false,
-    "isNew": false,
-    "rating": 4.7,
-    "reviewCount": 215,
-    "studentsCount": 11405,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "",
-    "description": "Class 10 Science Revision Notes with Mindmap - Quick Revision Chapter Notes by ExpertsTeachers. Ace your exams with expert-crafted notes and engaging summaries.",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "85528e0b-6c6e-4648-b18b-72c4f383374f",
-    "title": "CBSE Class 12 Biology Revision Notes with Quick Chapter Mindmaps - ExpertsTeachers",
-    "slug": "cbse-class-12-biology-revision-notes-with-quick-chapter-mindmaps-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.8,
-    "reviewCount": 244,
-    "studentsCount": 11528,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Unlock your potential with our CBSE Class 12 Biology Notes! Featuring expert revision notes and quick chapter mind maps to enhance your studying efficiency. Perfect for exam preparation!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "fc58f8d9-4904-42fb-b6b5-53c3678ddebf",
-    "title": "CBSE Class 12 Hindi Revision Notes with Mindmap - Quick Revision Chapter Notes by ExpertsTeachers",
-    "slug": "cbse-class-12-hindi-revision-notes-with-mindmap-quick-revision-chapter-notes-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": false,
-    "isNew": false,
-    "rating": 4.9,
-    "reviewCount": 273,
-    "studentsCount": 11651,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "",
-    "description": "CBSE Class 12 Hindi Revision Notes with Mindmap - Quick Revision Chapter Notes by ExpertsTeachers, designed for quick understanding and exam success!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "90de3b1b-fd52-4c24-88d4-1a889d2fcd42",
-    "title": "CBSE Class 12 Physics Notes - Quick Revision Chapter Notes with Mindmap by ExpertsTeachers",
-    "slug": "cbse-class-12-physics-notes-quick-revision-chapter-notes-with-mindmap-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": true,
-    "rating": 4.6,
-    "reviewCount": 302,
-    "studentsCount": 11774,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Unlock your potential with our CBSE Class 12 Physics Notes! Quick revision chapter notes and expert mind maps for effective learning. Ace your exams today!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3641,7 +3310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3682,7 +3350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3723,7 +3390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3764,7 +3430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3805,7 +3470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3846,7 +3510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3887,7 +3550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3928,7 +3590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -3969,7 +3630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4010,7 +3670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4051,7 +3710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4092,7 +3750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4133,7 +3790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4174,7 +3830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4215,7 +3870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4256,7 +3910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4297,7 +3950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4338,7 +3990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4379,7 +4030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4402,7 +4052,7 @@
     "rating": 4.6,
     "reviewCount": 882,
     "studentsCount": 14234,
-    "questionsCount": 450,
+    "questionsCount": 213,
     "testsCount": 7,
     "durationMinutes": 120,
     "passingScore": 72,
@@ -4420,7 +4070,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4461,7 +4110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4502,7 +4150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4543,89 +4190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "1fc0ce3c-88d0-4dac-868d-c55f1fd8ccfa",
-    "title": "CBSE Class 10 Hindi Revision Notes with Quick Revision Chapter Notes and Mindmap - ExpertsTeachers",
-    "slug": "cbse-class-10-hindi-revision-notes-with-quick-revision-chapter-notes-and-mindmap-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.6,
-    "reviewCount": 998,
-    "studentsCount": 14726,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Enhance your learning with our CBSE Class 10 Hindi Revision Notes. Get quick revision chapter notes and mind maps for effective exam preparation. Perfect for mastering Hindi!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "d48f006e-c5ce-4fd8-8768-414400aa8ed2",
-    "title": "CBSE Class 10 English Revision Notes with Quick Revision Chapter Notes and Mindmap - ExpertsTeachers",
-    "slug": "cbse-class-10-english-revision-notes-with-quick-revision-chapter-notes-and-mindmap-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": false,
-    "isNew": false,
-    "rating": 4.7,
-    "reviewCount": 1027,
-    "studentsCount": 14849,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "",
-    "description": "Unlock your potential with our CBSE Class 10 English Revision Notes! Featuring quick revision chapter notes and mind maps, designed for effective and efficient studying. Get yours now!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4666,7 +4230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4707,7 +4270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4748,7 +4310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4789,48 +4350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "42a5139b-a081-4ca4-bbed-a6b89d9e21f1",
-    "title": "CBSE Class 10 Social Science Notes - Quick Revision Chapter Notes with Mindmap by ExpertsTeachers",
-    "slug": "cbse-class-10-social-science-notes-quick-revision-chapter-notes-with-mindmap-by-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": false,
-    "isNew": false,
-    "rating": 4.8,
-    "reviewCount": 1172,
-    "studentsCount": 15464,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "",
-    "description": "Unlock success in your exams with our CBSE Class 10 Social Science Notes! Quick revision chapter notes and expert mind maps for effective learning. Get yours now!",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4871,7 +4390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4912,48 +4430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "c11c3df0-ed7c-4d1d-be09-9fa9d40458a7",
-    "title": "CBSE Class 12 Math Notes with MINDMAPS - ExpertsTeachers",
-    "slug": "cbse-class-12-math-notes-with-mindmaps-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": true,
-    "rating": 4.7,
-    "reviewCount": 1259,
-    "studentsCount": 15833,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Unlock Your Potential with CBSE Class 12 Math Notes\nStudying math can be challenging, but with CBSE Class 12 Math Notes accompanied by expert-crafted mind maps, you’re equipped for success! Designed by top educators, these notes offer comprehensive coverage of the CBSE syllabus, making complex conce",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -4994,7 +4470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5035,48 +4510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
-      "avatar": "/6577847_169c.webp",
-      "rating": 4.8,
-      "students": "48,000+",
-      "reviews": "7,500+"
-    }
-  },
-  {
-    "id": "60e3dcb2-5a8f-440b-b3cf-714417063d0e",
-    "title": "CBSE Class 10 Math Revision Notes with Quick Revision Chapter Notes and Mindmap - ExpertsTeachers",
-    "slug": "cbse-class-10-math-revision-notes-with-quick-revision-chapter-notes-and-mindmap-expertsteachers",
-    "category": "cbse",
-    "vendor": "Other IT",
-    "priceINR": 29,
-    "originalPriceINR": 199,
-    "priceUSD": 4.99,
-    "originalPriceUSD": 14.99,
-    "isFree": false,
-    "isBestseller": true,
-    "isNew": false,
-    "rating": 4.6,
-    "reviewCount": 1346,
-    "studentsCount": 16202,
-    "questionsCount": 450,
-    "testsCount": 7,
-    "durationMinutes": 120,
-    "passingScore": 72,
-    "badge": "Bestseller",
-    "description": "Get ready for exam success with our CBSE Class 10 Math Revision Notes! Featuring quick chapter summaries and mind maps, these notes simplify concepts for effective learning.",
-    "features": [
-      "7 Full-Length Timed Practice Tests (450+ Questions)",
-      "Comprehensive explanations for correct AND incorrect answer choices",
-      "Regularly updated to reflect the latest 2026 exam objectives",
-      "Interactive Test Engine: Timed Mode, Practice Mode & Question Review",
-      "Domain-by-domain readiness score breakdown",
-      "Mobile, tablet and desktop responsive interface",
-      "Lifetime access & 100% satisfaction guarantee"
-    ],
-    "instructor": {
-      "name": "Yogesh Dhiman",
-      "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5117,7 +4550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5158,7 +4590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5199,7 +4630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5240,7 +4670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5281,7 +4710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5322,7 +4750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5363,7 +4790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5404,7 +4830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5445,7 +4870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5486,7 +4910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5527,7 +4950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5568,7 +4990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5609,7 +5030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5650,7 +5070,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5691,7 +5110,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5732,7 +5150,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5773,7 +5190,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5814,7 +5230,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5855,7 +5270,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5896,7 +5310,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5937,7 +5350,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -5978,7 +5390,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6019,7 +5430,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6060,7 +5470,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6101,7 +5510,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6142,7 +5550,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6183,7 +5590,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6224,7 +5630,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6265,7 +5670,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6306,7 +5710,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6347,7 +5750,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6388,7 +5790,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6429,7 +5830,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6470,7 +5870,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6511,7 +5910,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6552,7 +5950,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6593,7 +5990,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",
@@ -6634,7 +6030,6 @@
     "instructor": {
       "name": "Yogesh Dhiman",
       "title": "Top-Rated Udemy Instructor & Senior Cloud Architect",
-      "udemyUrl": "https://www.udemy.com/user/yogesh-dhiman-22/",
       "avatar": "/6577847_169c.webp",
       "rating": 4.8,
       "students": "48,000+",

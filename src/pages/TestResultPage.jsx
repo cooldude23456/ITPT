@@ -3,6 +3,15 @@ import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import ReviewModal from '../components/ReviewModal';
 import {
+  isMultiSelectQuestion,
+  normalizeCorrectAnswers,
+  getQuestionExplanation,
+  getOptionExplanations,
+  formatAnswerLetters,
+  formatAnswerNumbers,
+  formatAnswerDisplay
+} from '../utils/questionUtils';
+import {
   Award,
   CheckCircle,
   XCircle,
@@ -20,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
-  const { getUserProductReview, currentUser } = useApp();
+  const { getUserProductReview, currentUser, openLoginModal } = useApp();
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'incorrect', 'correct', 'flagged'
   const [showCertificate, setShowCertificate] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -69,20 +78,23 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
   const minutes = Math.floor(timeSpentSeconds / 60);
   const seconds = timeSpentSeconds % 60;
 
-  // Filter questions
-  const filteredQuestions = questions.filter((q, idx) => {
-    const userAns = selectedAnswers[idx] || [];
-    const correctAns = q.correctAnswers || [];
-    const isCorrect =
-      userAns.length === correctAns.length &&
-      userAns.every(ans => correctAns.includes(ans));
-    const isFlagged = !!flaggedQuestions[idx];
+  // Filter questions with robust answer normalization
+  const filteredQuestions = questions
+    .map((q, idx) => ({ ...q, originalIndex: idx }))
+    .filter((q) => {
+      const userAns = (selectedAnswers[q.originalIndex] || []).map(Number);
+      const correctAns = normalizeCorrectAnswers(q);
+      const isCorrect =
+        userAns.length === correctAns.length &&
+        userAns.length > 0 &&
+        userAns.every(ans => correctAns.includes(ans));
+      const isFlagged = Boolean(flaggedQuestions[q.originalIndex]);
 
-    if (activeFilter === 'incorrect') return !isCorrect;
-    if (activeFilter === 'correct') return isCorrect;
-    if (activeFilter === 'flagged') return isFlagged;
-    return true;
-  });
+      if (activeFilter === 'incorrect') return !isCorrect;
+      if (activeFilter === 'correct') return isCorrect;
+      if (activeFilter === 'flagged') return isFlagged;
+      return true;
+    });
 
   return (
     <div className="min-h-screen bg-[#f7f9fa] py-8 px-4 font-sans">
@@ -362,12 +374,18 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
           {/* List of Filtered Questions */}
           <div className="space-y-6">
             {filteredQuestions.map((q, filteredIdx) => {
-              const originalIndex = questions.findIndex(orig => orig.id === q.id);
-              const userAns = selectedAnswers[originalIndex] || [];
-              const correctAns = q.correctAnswers || [];
+              const originalIndex = q.originalIndex !== undefined ? q.originalIndex : questions.findIndex(orig => orig.id === q.id);
+              const userAns = (selectedAnswers[originalIndex] || []).map(Number);
+              const correctAns = normalizeCorrectAnswers(q);
               const isCorrect =
                 userAns.length === correctAns.length &&
+                userAns.length > 0 &&
                 userAns.every(ans => correctAns.includes(ans));
+              const isMulti = isMultiSelectQuestion(q);
+              const correctLetters = formatAnswerLetters(correctAns);
+              const correctNumbers = formatAnswerNumbers(correctAns);
+              const userLetters = formatAnswerLetters(userAns);
+              const userNumbers = formatAnswerNumbers(userAns);
 
               return (
                 <div
@@ -392,8 +410,13 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
                         Question {originalIndex + 1}
                       </span>
                       <span className="text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded">
-                        {q.domain}
+                        {q.domain || 'General'}
                       </span>
+                      {isMulti && (
+                        <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded border border-purple-200">
+                          Multi-select
+                        </span>
+                      )}
                     </div>
 
                     <span
@@ -412,27 +435,81 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
                     {q.question}
                   </div>
 
-                  {/* Choices options */}
-                  <div className="pl-8 space-y-2">
+                  {/* Explicit Correct Answer Summary Callout Bar */}
+                  <div className="pl-8">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Official Correct Answer{correctAns.length > 1 ? 's' : ''}:
+                        </span>
+                        <span className="font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-md flex items-center space-x-1">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600 inline mr-1" />
+                          <span>
+                            {correctLetters.map((l, i) => `Option ${l} (${correctNumbers[i]})`).join(', ')} [{correctLetters.join(', ')} / Choices {correctNumbers.join(', ')}]
+                          </span>
+                        </span>
+                        {isMulti && (
+                          <span className="text-[10px] font-bold text-purple-900 bg-purple-100/80 px-2 py-0.5 rounded border border-purple-200">
+                            Multi-select (Select all {correctAns.length} required)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Your Answer:
+                        </span>
+                        {userAns.length > 0 ? (
+                          <span
+                            className={`font-bold px-2.5 py-0.5 rounded-md border ${
+                              isCorrect
+                                ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                                : 'text-rose-800 bg-rose-50 border-rose-300'
+                            }`}
+                          >
+                            {userLetters.map((l, i) => `Option ${l} (${userNumbers[i]})`).join(', ')}
+                            {isCorrect ? ' ✓ Correct' : ' ✕ Incorrect'}
+                          </span>
+                        ) : (
+                          <span className="font-bold text-amber-800 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-md">
+                            No answer selected (Unanswered)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Choices options with clear badges */}
+                  <div className="pl-8 space-y-2.5">
                     {q.options.map((opt, optIdx) => {
                       const isUserChoice = userAns.includes(optIdx);
                       const isCorrectChoice = correctAns.includes(optIdx);
 
                       let badge = null;
-                      let bgClass = 'bg-white border-slate-200 text-slate-700';
+                      let bgClass = 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50';
 
-                      if (isCorrectChoice) {
-                        bgClass = 'bg-emerald-100/70 border-emerald-400 text-emerald-950 font-medium';
+                      if (isCorrectChoice && isUserChoice) {
+                        bgClass = 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-medium ring-1 ring-emerald-400';
                         badge = (
-                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded ml-auto">
-                            Correct Answer
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded ml-auto flex items-center gap-1 shrink-0">
+                            <CheckCircle className="w-3 h-3 text-emerald-700" />
+                            <span>Your Choice (Correct)</span>
+                          </span>
+                        );
+                      } else if (isCorrectChoice && !isUserChoice) {
+                        bgClass = 'bg-emerald-50 border-emerald-400 text-emerald-950 font-medium';
+                        badge = (
+                          <span className="text-[10px] font-extrabold text-emerald-900 bg-emerald-200/90 px-2 py-0.5 rounded ml-auto flex items-center gap-1 shrink-0">
+                            <CheckCircle className="w-3 h-3 text-emerald-700" />
+                            <span>Correct Answer</span>
                           </span>
                         );
                       } else if (isUserChoice && !isCorrectChoice) {
-                        bgClass = 'bg-rose-100/70 border-rose-400 text-rose-950 font-medium';
+                        bgClass = 'bg-rose-100/70 border-rose-400 text-rose-950 font-medium ring-1 ring-rose-400';
                         badge = (
-                          <span className="text-[10px] font-extrabold text-rose-800 bg-rose-200 px-2 py-0.5 rounded ml-auto">
-                            Your Incorrect Selection
+                          <span className="text-[10px] font-extrabold text-rose-800 bg-rose-200 px-2 py-0.5 rounded ml-auto flex items-center gap-1 shrink-0">
+                            <XCircle className="w-3 h-3 text-rose-700" />
+                            <span>Your Incorrect Selection</span>
                           </span>
                         );
                       }
@@ -440,10 +517,12 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
                       return (
                         <div
                           key={optIdx}
-                          className={`p-3 rounded-lg border text-xs flex items-center space-x-2 ${bgClass}`}
+                          className={`p-3.5 rounded-xl border text-xs flex items-center space-x-3 transition ${bgClass}`}
                         >
-                          <span className="font-bold">{String.fromCharCode(65 + optIdx)}.</span>
-                          <span className="flex-1">{opt}</span>
+                          <span className="font-bold font-mono text-xs w-11 shrink-0">
+                            {String.fromCharCode(65 + optIdx)} ({optIdx + 1}).
+                          </span>
+                          <span className="flex-1 leading-relaxed">{opt}</span>
                           {badge}
                         </div>
                       );
@@ -451,44 +530,60 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
                   </div>
 
                   {/* In-depth Explanation Box */}
-                  <div className="ml-8 bg-white border border-slate-200 rounded-lg p-4 space-y-2 text-xs">
-                    <div className="flex items-center space-x-2 text-purple-900 font-bold">
-                      <Sparkles className="w-4 h-4 text-purple-600" />
+                  <div className="ml-8 bg-purple-50/50 border border-purple-200 rounded-xl p-4 space-y-3 text-xs">
+                    <div className="flex items-center space-x-2 text-purple-900 font-extrabold text-sm">
+                      <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
                       <span>Answer Explanation & Architecture Insights:</span>
                     </div>
-                    <p className="text-slate-700 leading-relaxed">
-                      {q.overallExplanation || q.explanation}
-                    </p>
+
+                    <div className="text-slate-800 leading-relaxed font-normal whitespace-pre-line bg-white p-3.5 rounded-lg border border-purple-100 shadow-2xs">
+                      {getQuestionExplanation(q)}
+                    </div>
 
                     {/* Option-by-Option Breakdown */}
-                    {q.optionExplanations && q.optionExplanations.some(Boolean) && (
-                      <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                        <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block">
-                          Option-by-Option Analysis:
-                        </span>
-                        {q.options.map((opt, i) => {
-                          const exp = q.optionExplanations[i];
-                          if (!exp) return null;
-                          const isCorrectChoice = q.correctAnswers.includes(i);
-                          return (
-                            <div key={i} className="text-xs flex items-start space-x-1.5">
-                              <span className={`font-bold shrink-0 ${isCorrectChoice ? 'text-emerald-700' : 'text-slate-600'}`}>
-                                Option {String.fromCharCode(65 + i)} {isCorrectChoice ? '(Correct):' : '(Incorrect):'}
-                              </span>
-                              <span className="text-slate-600 leading-snug">{exp}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {(() => {
+                      const optExps = getOptionExplanations(q);
+                      if (!optExps || !optExps.some(Boolean)) return null;
+                      return (
+                        <div className="pt-2 border-t border-purple-200/70 space-y-2">
+                          <span className="text-[11px] font-bold text-purple-950 uppercase tracking-wider block">
+                            Option-by-Option Analysis:
+                          </span>
+                          {q.options.map((opt, i) => {
+                            const exp = optExps[i];
+                            if (!exp) return null;
+                            const isOptCorrect = correctAns.includes(i);
+                            return (
+                              <div
+                                key={i}
+                                className={`text-xs p-2.5 rounded-lg border flex items-start space-x-2 ${
+                                  isOptCorrect
+                                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 font-medium'
+                                    : 'bg-white border-slate-200 text-slate-800'
+                                }`}
+                              >
+                                <span
+                                  className={`font-bold shrink-0 ${
+                                    isOptCorrect ? 'text-emerald-700' : 'text-slate-600'
+                                  }`}
+                                >
+                                  Option {String.fromCharCode(65 + i)} {isOptCorrect ? '(Correct):' : '(Incorrect):'}
+                                </span>
+                                <span className="leading-snug flex-1">{exp}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
 
                     {q.reference && (
-                      <div className="pt-2">
+                      <div className="pt-1">
                         <a
                           href={q.reference}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center space-x-1 font-semibold text-purple-700 hover:underline"
+                          className="inline-flex items-center space-x-1 font-bold text-purple-700 hover:text-purple-900 hover:underline"
                         >
                           <span>Official Vendor Documentation Reference</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -581,6 +676,11 @@ export default function TestResultPage({ attempt, onRetake, onBackToCatalog }) {
         <ReviewModal
           isOpen={showReviewModal}
           onClose={() => setShowReviewModal(false)}
+          product={{
+            id: attempt.testId,
+            title: attempt.productTitle || 'Course Exam Simulator',
+            vendor: attempt.vendor || 'Certification Exam'
+          }}
           productId={attempt.testId}
           productTitle={attempt.productTitle}
         />

@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { parseExcelOrCsvFile, downloadSampleExcelTemplate } from '../utils/excelParser';
+import {
+  parseExcelOrCsvFile,
+  downloadSampleExcelTemplate,
+  isMultiSelectQuestion,
+  normalizeCorrectAnswers,
+  getQuestionExplanation,
+  formatAnswerLetters,
+  formatAnswerNumbers
+} from '../utils/excelParser';
 import { generateHmacSignature, verifyPaymentSignature, maskSecretKey } from '../utils/security';
 import {
   ShieldCheck,
@@ -106,7 +114,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
   const [selectedEmailForInspection, setSelectedEmailForInspection] = useState(null);
   const [emailSettingsForm, setEmailSettingsForm] = useState({
     primaryAdminEmail: adminEmailSettings?.primaryAdminEmail || 'support@itpracticetests.com',
-    secondaryAdminEmail: adminEmailSettings?.secondaryAdminEmail || 'yogesh@itpracticetests.com',
+    secondaryAdminEmail: adminEmailSettings?.secondaryAdminEmail || 'rath.sanjiv.rath@gmail.com',
     enableInstantEmail: adminEmailSettings?.enableInstantEmail ?? true,
     webhookUrl: adminEmailSettings?.webhookUrl || '',
     smtpHost: adminEmailSettings?.smtpHost || 'smtp.gmail.com',
@@ -182,7 +190,15 @@ export default function AdminPanelPage({ onSelectProduct }) {
     e.preventDefault();
     if (!editCourseForm.title.trim()) return;
 
-    updateProduct(editCourseForm);
+    const isFree = Boolean(editCourseForm.isFree || (editCourseForm.priceINR === 0 && editCourseForm.priceUSD === 0));
+    const toSave = {
+      ...editCourseForm,
+      isFree,
+      priceINR: isFree ? 0 : editCourseForm.priceINR,
+      priceUSD: isFree ? 0 : editCourseForm.priceUSD
+    };
+
+    updateProduct(toSave);
     setShowEditCourseModal(false);
     setEditingCourse(null);
     showNotification(`Course "${editCourseForm.title}" updated successfully! All enrolled students automatically have lifetime access to this updated content without needing to repurchase.`);
@@ -236,6 +252,11 @@ export default function AdminPanelPage({ onSelectProduct }) {
     keyId: '',
     keySecret: '',
     webhookSecret: '',
+    merchantEmail: '',
+    merchantName: '',
+    paypalMe: '',
+    upiVpa: '',
+    paymentLink: '',
     isTestMode: true,
     currency: 'USD',
     supportedMethods: ['Credit/Debit Cards', 'Apple Pay', 'Google Pay']
@@ -347,27 +368,31 @@ export default function AdminPanelPage({ onSelectProduct }) {
     e.preventDefault();
     if (!courseForm.title.trim()) return;
 
+    const isFree = Boolean(courseForm.isFree || (courseForm.priceINR === 0 && courseForm.priceUSD === 0));
     const created = addProduct({
       ...courseForm,
-      questionsCount: courseForm.questions.length * 50 || 350,
-      testsCount: 6
+      isFree,
+      priceINR: isFree ? 0 : courseForm.priceINR,
+      priceUSD: isFree ? 0 : courseForm.priceUSD,
+      questionsCount: courseForm.questions?.length ? courseForm.questions.length * 50 : (courseForm.questionsCount || 50),
+      testsCount: courseForm.testsCount || 1
     });
 
     setShowCreateCourseModal(false);
     showNotification(`New course "${created.title}" published live to ITPracticeTests!`);
   };
 
-  // Handle gateway creation
-  const handleAddGatewaySubmit = (e) => {
+  // Handle gateway creation or configuration
+  const handleAddGatewaySubmit = async (e) => {
     e.preventDefault();
     if (!gatewayForm.name.trim()) return;
 
-    addPaymentGateway({
+    await addPaymentGateway({
       ...gatewayForm
     });
 
     setShowAddGatewayModal(false);
-    showNotification(`Payment Gateway "${gatewayForm.name}" added and enabled!`);
+    showNotification(`Payment Gateway "${gatewayForm.name}" configured and saved!`);
   };
 
   const handleEditGatewaySubmit = async (e) => {
@@ -577,6 +602,21 @@ export default function AdminPanelPage({ onSelectProduct }) {
       deleteBlog(blogId);
       showNotification(`Article "${blogTitle}" deleted.`);
     }
+  };
+
+  const getCustomBankCount = (prodId) => {
+    const bank = customQuestionBanks?.[prodId];
+    if (!bank) return 0;
+    if (Array.isArray(bank)) return bank.length;
+    if (bank.all?.length) return bank.all.length;
+    const testValues = Object.entries(bank)
+      .filter(([k, v]) => Array.isArray(v) && k !== 'all' && k !== 'tests')
+      .map(([, v]) => v.length);
+    if (testValues.length > 0) return testValues.reduce((a, b) => a + b, 0);
+    if (bank.tests) {
+      return Object.values(bank.tests).filter(Array.isArray).reduce((a, b) => a + b.length, 0);
+    }
+    return 0;
   };
 
   // Filtered courses
@@ -1031,9 +1071,9 @@ export default function AdminPanelPage({ onSelectProduct }) {
                         )}
                       </td>
                       <td className="py-3 px-3 font-medium text-gray-600">
-                        {customQuestionBanks?.[prod.id] ? (
+                        {getCustomBankCount(prod.id) > 0 ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            {customQuestionBanks[prod.id].length} Qs (Custom)
+                            {getCustomBankCount(prod.id)} Qs (Custom)
                           </span>
                         ) : (
                           <span className="text-gray-600">{prod.questionsCount || 400} Qs</span>
@@ -1919,6 +1959,24 @@ export default function AdminPanelPage({ onSelectProduct }) {
                       onClick={() => {
                         setEmailSettingsForm(prev => ({
                           ...prev,
+                          smtpHost: 'smtp.hostinger.com',
+                          smtpPort: 465,
+                          smtpSecure: true,
+                          smtpUser: prev.smtpUser || 'support@itpracticetests.com',
+                          senderName: 'ITPracticeTests Orders',
+                          senderEmail: 'orders@itpracticetests.com'
+                        }));
+                        setSuccessNotice('🟣 Applied Hostinger Webmail presets (smtp.hostinger.com:465 SSL)! Enter your Hostinger email password below.');
+                      }}
+                      className="bg-white hover:bg-indigo-100/70 border border-indigo-200 text-indigo-900 font-bold px-3 py-1.5 rounded-lg shadow-2xs transition"
+                    >
+                      🟣 Auto-Fill Hostinger Webmail (smtp.hostinger.com)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailSettingsForm(prev => ({
+                          ...prev,
                           smtpHost: 'mail.itpracticetests.com',
                           smtpPort: 465,
                           smtpSecure: true,
@@ -1982,7 +2040,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
                           type="email"
                           value={emailSettingsForm.secondaryAdminEmail || ''}
                           onChange={(e) => setEmailSettingsForm({ ...emailSettingsForm, secondaryAdminEmail: e.target.value })}
-                          placeholder="yogesh@itpracticetests.com"
+                          placeholder="rath.sanjiv.rath@gmail.com"
                           className="w-full bg-white border border-slate-300 rounded-lg p-2.5 font-medium"
                         />
                         <p className="text-[11px] text-gray-400 mt-1">
@@ -3246,6 +3304,27 @@ export default function AdminPanelPage({ onSelectProduct }) {
                 </div>
               </div>
 
+              <div className="flex items-center space-x-2 bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-200">
+                <input
+                  type="checkbox"
+                  id="editIsFree"
+                  checked={Boolean(editCourseForm.isFree || (editCourseForm.priceINR === 0 && editCourseForm.priceUSD === 0))}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEditCourseForm({
+                      ...editCourseForm,
+                      isFree: checked,
+                      priceINR: checked ? 0 : (editCourseForm.priceINR || 399),
+                      priceUSD: checked ? 0 : (editCourseForm.priceUSD || 4.99)
+                    });
+                  }}
+                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="editIsFree" className="text-xs font-bold text-emerald-950 cursor-pointer">
+                  100% Free Practice Test / Diagnostic Exam (Enables Free Mode)
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block font-bold text-gray-700 mb-1">Price (₹ INR)</label>
@@ -3355,8 +3434,8 @@ export default function AdminPanelPage({ onSelectProduct }) {
 
       {/* MODAL 2: Add Payment Gateway Modal */}
       {showAddGatewayModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-udemy-border space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-udemy-border space-y-4 max-h-[92vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-extrabold text-base text-udemy-dark flex items-center space-x-2">
                 <CreditCard className="w-5 h-5 text-purple-600" />
@@ -3374,11 +3453,43 @@ export default function AdminPanelPage({ onSelectProduct }) {
                   value={gatewayForm.provider}
                   onChange={(e) => {
                     const prov = e.target.value;
-                    setGatewayForm({
-                      ...gatewayForm,
-                      provider: prov,
-                      name: `${prov} Gateway`
-                    });
+                    const existing = paymentGateways.find(g =>
+                      (g.provider || '').toLowerCase().includes(prov.toLowerCase()) ||
+                      prov.toLowerCase().includes((g.provider || '').toLowerCase())
+                    );
+                    if (existing) {
+                      setGatewayForm({
+                        ...gatewayForm,
+                        provider: existing.provider || prov,
+                        name: existing.name || `${prov} Gateway`,
+                        keyId: existing.keyId || existing.clientId || '',
+                        keySecret: existing.keySecret || existing.clientSecret || '',
+                        webhookSecret: existing.webhookSecret || '',
+                        merchantEmail: existing.merchantEmail || '',
+                        merchantName: existing.merchantName || '',
+                        paypalMe: existing.paypalMe || '',
+                        upiVpa: existing.upiVpa || existing.upi_vpa || '',
+                        isTestMode: existing.isTestMode ?? false,
+                        paymentLink: existing.paymentLink || '',
+                        currency: existing.currency || (prov === 'PayPal' ? 'USD' : 'INR')
+                      });
+                    } else {
+                      setGatewayForm({
+                        ...gatewayForm,
+                        provider: prov,
+                        name: `${prov} Gateway`,
+                        keyId: '',
+                        keySecret: '',
+                        webhookSecret: '',
+                        merchantEmail: '',
+                        merchantName: '',
+                        paypalMe: '',
+                        upiVpa: '',
+                        isTestMode: false,
+                        paymentLink: '',
+                        currency: prov === 'PayPal' || prov === 'Stripe' ? 'USD' : 'INR'
+                      });
+                    }
                   }}
                   className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5"
                 >
@@ -3388,7 +3499,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
                   <option value="PayU">PayU Biz India</option>
                   <option value="CCAvenue">CCAvenue Enterprise</option>
                   <option value="PayPal">PayPal Checkout</option>
-                  <option value="UPI">Direct UPI QR Code</option>
+                  <option value="UPI Direct">Direct UPI QR Code</option>
                 </select>
               </div>
 
@@ -3403,42 +3514,115 @@ export default function AdminPanelPage({ onSelectProduct }) {
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">
-                  API Key ID / Merchant ID / App ID *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. rzp_live_9k8a2026 or app_id_99"
-                  value={gatewayForm.keyId}
-                  onChange={(e) => setGatewayForm({ ...gatewayForm, keyId: e.target.value })}
-                  className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
-                />
-              </div>
+              {gatewayForm.provider === 'UPI Direct' ? (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Merchant UPI VPA *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. yourname@okhdfcbank or merchant@upi"
+                      value={gatewayForm.upiVpa}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, upiVpa: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Merchant Business Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ITPracticeTests Online Education"
+                      value={gatewayForm.merchantName}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, merchantName: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Direct Payment Link (Optional)</label>
+                    <input
+                      type="url"
+                      placeholder="https://razorpay.me/@..."
+                      value={gatewayForm.paymentLink || ''}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, paymentLink: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                </>
+              ) : gatewayForm.provider === 'PayPal' ? (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">PayPal Client ID *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. ARwtJURx..."
+                      value={gatewayForm.keyId}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, keyId: e.target.value, clientId: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">PayPal Business Email *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="payments@itpracticetests.com"
+                      value={gatewayForm.merchantEmail}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, merchantEmail: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">PayPal.Me Username</label>
+                    <input
+                      type="text"
+                      placeholder="ExpertsTeachers"
+                      value={gatewayForm.paypalMe}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, paypalMe: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">
+                      API Key ID / Merchant ID / App ID *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. rzp_live_9k8a2026 or app_id_99"
+                      value={gatewayForm.keyId}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, keyId: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Secret Key / Merchant Salt *</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter secret key..."
-                  value={gatewayForm.keySecret}
-                  onChange={(e) => setGatewayForm({ ...gatewayForm, keySecret: e.target.value })}
-                  className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
-                />
-              </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Secret Key / Merchant Salt *</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter secret key..."
+                      value={gatewayForm.keySecret}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, keySecret: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Webhook Secret (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="whsec_..."
-                  value={gatewayForm.webhookSecret}
-                  onChange={(e) => setGatewayForm({ ...gatewayForm, webhookSecret: e.target.value })}
-                  className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
-                />
-              </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Webhook Secret (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="whsec_..."
+                      value={gatewayForm.webhookSecret}
+                      onChange={(e) => setGatewayForm({ ...gatewayForm, webhookSecret: e.target.value })}
+                      className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center space-x-2 pt-1">
                 <input
@@ -3453,19 +3637,35 @@ export default function AdminPanelPage({ onSelectProduct }) {
                 </label>
               </div>
 
+              {(() => {
+                const existing = paymentGateways.find(g =>
+                  (g.provider || '').toLowerCase().includes(gatewayForm.provider.toLowerCase()) ||
+                  gatewayForm.provider.toLowerCase().includes((g.provider || '').toLowerCase())
+                );
+                if (existing) {
+                  return (
+                    <div className="bg-purple-50 border border-purple-200 text-purple-900 rounded-lg p-2.5 text-[11px] flex items-center space-x-2">
+                      <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
+                      <span><strong>{existing.provider}</strong> is already configured. Saving will update its live API credentials without creating duplicates.</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddGatewayModal(false)}
-                  className="px-4 py-2 border rounded-lg"
+                  className="px-4 py-2 border rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg cursor-pointer transition shadow-sm"
                 >
-                  Save & Enable Gateway
+                  Save &amp; Configure Gateway
                 </button>
               </div>
             </form>
@@ -3593,7 +3793,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. itpracticetests@okhdfcbank"
+                      placeholder="e.g. yourname@okhdfcbank or merchant@upi"
                       value={editGatewayForm.upiVpa}
                       onChange={(e) => setEditGatewayForm({ ...editGatewayForm, upiVpa: e.target.value })}
                       className="w-full bg-[#f7f9fa] border border-slate-300 rounded-lg p-2.5 font-mono text-xs"
@@ -3767,8 +3967,8 @@ export default function AdminPanelPage({ onSelectProduct }) {
 
       {/* MODAL 3: Add Coupon Modal */}
       {showAddCouponModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-udemy-border space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-udemy-border space-y-4 max-h-[92vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-extrabold text-base text-udemy-dark flex items-center space-x-2">
                 <Tag className="w-5 h-5 text-purple-600" />
@@ -4268,7 +4468,7 @@ export default function AdminPanelPage({ onSelectProduct }) {
                   <option value="">-- Choose Course ({products.length} available) --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      [{p.vendor}] {p.title} {customQuestionBanks?.[p.id] ? `(${customQuestionBanks[p.id].all?.length || customQuestionBanks[p.id].length || 0} Qs loaded)` : ''}
+                      [{p.vendor}] {p.title} {getCustomBankCount(p.id) > 0 ? `(${getCustomBankCount(p.id)} Qs loaded)` : ''}
                     </option>
                   ))}
                 </select>
@@ -4388,10 +4588,10 @@ export default function AdminPanelPage({ onSelectProduct }) {
                   </div>
                   <div className="flex items-center space-x-2 text-xs">
                     <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">
-                      {parsedQuestions.filter(q => q.type === 'single').length} Multi-choice
+                      {parsedQuestions.filter(q => !isMultiSelectQuestion(q)).length} Multi-choice
                     </span>
                     <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">
-                      {parsedQuestions.filter(q => q.type === 'multiple').length} Multi-select
+                      {parsedQuestions.filter(q => isMultiSelectQuestion(q)).length} Multi-select
                     </span>
                   </div>
                 </div>
@@ -4407,56 +4607,88 @@ export default function AdminPanelPage({ onSelectProduct }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
-                      {parsedQuestions.slice(0, 8).map((q, idx) => (
-                        <tr key={idx} className="hover:bg-purple-50/40">
-                          <td className="py-2.5 px-3 font-bold text-gray-500">{idx + 1}</td>
-                          <td className="py-2.5 px-3">
-                            {q.type === 'multiple' ? (
-                              <span className="inline-block bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                Multi-select ({q.correctAnswers?.length || 1} answers)
-                              </span>
-                            ) : (
-                              <span className="inline-block bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                Multi-choice (1 answer)
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 space-y-1">
-                            <p className="font-bold text-gray-900">{q.question}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] pt-1">
-                              {q.options?.map((opt, oIdx) => {
-                                const isCorrect = q.correctAnswers?.includes(oIdx);
-                                return (
-                                  <div
-                                    key={oIdx}
-                                    className={`px-2 py-1 rounded border text-[11px] flex items-start space-x-1 ${
-                                      isCorrect
-                                        ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold'
-                                        : 'bg-gray-50 text-gray-600 border-gray-200'
-                                    }`}
-                                  >
-                                    <span className="font-mono text-gray-400">
-                                      {String.fromCharCode(65 + oIdx)}.
-                                    </span>
-                                    <span className="flex-1">{opt}</span>
-                                    {isCorrect && (
-                                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {q.explanation && (
-                              <p className="text-[10px] text-gray-500 italic mt-1 line-clamp-1">
-                                <strong>Explanation:</strong> {q.explanation}
-                              </p>
-                            )}
-                          </td>
+                      {parsedQuestions.slice(0, 8).map((q, idx) => {
+                        const correctAns = normalizeCorrectAnswers(q);
+                        const isMulti = isMultiSelectQuestion(q);
+                        const correctLetters = formatAnswerLetters(correctAns);
+                        const correctNumbers = formatAnswerNumbers(correctAns);
+
+                        return (
+                          <tr key={idx} className="hover:bg-purple-50/40">
+                            <td className="py-2.5 px-3 font-bold text-gray-500">{idx + 1}</td>
+                            <td className="py-2.5 px-3">
+                              {isMulti ? (
+                                <div className="space-y-1">
+                                  <span className="inline-block bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                    Multi-select ({correctAns.length} answers)
+                                  </span>
+                                  {(q.rawCorrectAnswer || q.originalCorrectAnswer) && (
+                                    <div className="text-[10px] text-gray-500 font-mono">
+                                      Raw: {String(q.rawCorrectAnswer || q.originalCorrectAnswer)}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <span className="inline-block bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                    Multi-choice (1 answer)
+                                  </span>
+                                  {(q.rawCorrectAnswer || q.originalCorrectAnswer) && (
+                                    <div className="text-[10px] text-gray-500 font-mono">
+                                      Raw: {String(q.rawCorrectAnswer || q.originalCorrectAnswer)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 space-y-1.5">
+                              <p className="font-bold text-gray-900">{q.question}</p>
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                  <span>Correct: {correctLetters.map((l, i) => `Option ${l} (${correctNumbers[i]})`).join(', ')}</span>
+                                </span>
+                                {isMulti && (
+                                  <span className="text-[10px] font-bold text-purple-800 bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded">
+                                    {correctAns.length} answers required
+                                  </span>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] pt-1">
+                                {q.options?.map((opt, oIdx) => {
+                                  const isCorrect = correctAns.includes(oIdx);
+                                  return (
+                                    <div
+                                      key={oIdx}
+                                      className={`px-2 py-1 rounded border text-[11px] flex items-start space-x-1 ${
+                                        isCorrect
+                                          ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold'
+                                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                                      }`}
+                                    >
+                                      <span className="font-mono text-gray-500 font-semibold">
+                                        {String.fromCharCode(65 + oIdx)} ({oIdx + 1}).
+                                      </span>
+                                      <span className="flex-1">{opt}</span>
+                                      {isCorrect && (
+                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              {getQuestionExplanation(q) && (
+                                <p className="text-[10px] text-gray-600 italic mt-1 line-clamp-2 bg-slate-100 p-1.5 rounded">
+                                  <strong>Explanation:</strong> {getQuestionExplanation(q)}
+                                </p>
+                              )}
+                            </td>
                           <td className="py-2.5 px-3 text-gray-600 text-[11px]">
                             {q.domain || 'General'}
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                     </tbody>
                   </table>
                   {parsedQuestions.length > 8 && (

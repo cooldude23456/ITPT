@@ -4,6 +4,11 @@ import { getQuestionsForProduct } from '../data/questionBanks';
 import { initialBlogs } from '../data/initialBlogs';
 import { initialReviews } from '../data/initialReviews';
 import {
+  normalizeCorrectAnswers,
+  isMultiSelectQuestion,
+  getQuestionExplanation
+} from '../utils/questionUtils';
+import {
   generateSecureNonce,
   generateHmacSignature,
   verifyPaymentSignature,
@@ -18,6 +23,7 @@ import {
   getAdminEmailSettings,
   saveAdminEmailSettings,
   getAdminEmailInbox,
+  saveEmailToAdminInbox,
   dispatchAdminOrderNotificationEmail
 } from '../utils/emailService';
 import {
@@ -55,7 +61,7 @@ import {
   fetchServerEnrolledCourses,
   fetchActiveGatewaysApi
 } from '../services/supabaseService';
-import { SUPABASE_PROJECT_ID, SUPABASE_URL } from '../lib/supabase';
+import { supabase, SUPABASE_PROJECT_ID, SUPABASE_URL } from '../lib/supabase';
 
 const AppContext = createContext();
 
@@ -89,45 +95,97 @@ const initialUsers = [
     password: 'student123',
     createdAt: '2026-10-02',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face'
+  },
+  {
+    id: 'user-bestdeals-1',
+    name: 'Rahul',
+    email: 'bestdealsteam@gmail.com',
+    role: 'student',
+    phone: '9253330335',
+    password: 'student123',
+    createdAt: '2026-10-16',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Rahul'
   }
 ];
 
-// Default Payment Gateways seed
+// Helper: Normalize payment provider names to standard canonical form
+export function normalizeGatewayProvider(provider = '') {
+  const p = (provider || '').trim().toLowerCase();
+  if (p.includes('razorpay')) return 'Razorpay';
+  if (p.includes('cashfree')) return 'Cashfree';
+  if (p.includes('paypal')) return 'PayPal';
+  if (p.includes('payu')) return 'PayU';
+  if (p.includes('ccavenue')) return 'CCAvenue';
+  if (p.includes('upi')) return 'UPI Direct';
+  if (p.includes('stripe')) return 'Stripe';
+  return provider.trim();
+}
+
+// Helper: Generate deterministic canonical gateway ID
+export function getCanonicalGatewayId(provider = '') {
+  const norm = normalizeGatewayProvider(provider).toLowerCase().replace(/[^a-z0-9]/g, '-');
+  return `gateway-${norm}`;
+}
+
+// Helper: Strictly deduplicate payment gateways by provider, merging credentials
+export function deduplicateGateways(gateways) {
+  if (!Array.isArray(gateways)) return [];
+  const map = new Map();
+
+  gateways.forEach(gw => {
+    if (!gw || !gw.provider) return;
+    const normProvider = normalizeGatewayProvider(gw.provider);
+    const canonicalId = getCanonicalGatewayId(normProvider);
+
+    const existing = map.get(normProvider);
+    if (!existing) {
+      map.set(normProvider, { ...gw, id: gw.id || canonicalId, provider: normProvider });
+    } else {
+      // Merge: prefer non-empty credentials and live URLs
+      map.set(normProvider, {
+        ...existing,
+        ...gw,
+        id: canonicalId,
+        provider: normProvider,
+        name: gw.name || existing.name,
+        keyId: gw.keyId || gw.key_id || existing.keyId || existing.key_id || '',
+        clientId: gw.clientId || gw.client_id || existing.clientId || existing.client_id || '',
+        keySecret: gw.keySecret || gw.key_secret || existing.keySecret || existing.key_secret || '',
+        clientSecret: gw.clientSecret || gw.client_secret || existing.clientSecret || existing.client_secret || '',
+        webhookSecret: gw.webhookSecret || gw.webhook_secret || existing.webhookSecret || existing.webhook_secret || '',
+        merchantEmail: (gw.merchantEmail !== undefined && gw.merchantEmail !== '') ? gw.merchantEmail : ((gw.merchant_email !== undefined && gw.merchant_email !== '') ? gw.merchant_email : (existing.merchantEmail || existing.merchant_email || '')),
+        merchantName: (gw.merchantName !== undefined && gw.merchantName !== '') ? gw.merchantName : ((gw.merchant_name !== undefined && gw.merchant_name !== '') ? gw.merchant_name : (existing.merchantName || existing.merchant_name || '')),
+        paypalMe: (gw.paypalMe !== undefined && gw.paypalMe !== '') ? gw.paypalMe : ((gw.paypal_me !== undefined && gw.paypal_me !== '') ? gw.paypal_me : (existing.paypalMe || existing.paypal_me || '')),
+        upiVpa: (gw.upiVpa !== undefined && gw.upiVpa !== '') ? gw.upiVpa : ((gw.upi_vpa !== undefined && gw.upi_vpa !== '') ? gw.upi_vpa : (existing.upiVpa || existing.upi_vpa || '')),
+        paymentLink: gw.paymentLink || gw.payment_link || existing.paymentLink || existing.payment_link || '',
+        isTestMode: gw.isTestMode !== undefined ? gw.isTestMode : (existing.isTestMode ?? false),
+        isEnabled: gw.isEnabled !== undefined ? gw.isEnabled : (existing.isEnabled ?? true),
+        supportedMethods: Array.isArray(gw.supportedMethods) && gw.supportedMethods.length > 0
+          ? gw.supportedMethods
+          : (Array.isArray(existing.supportedMethods) && existing.supportedMethods.length > 0 ? existing.supportedMethods : ['Credit/Debit Cards', 'UPI', 'NetBanking']),
+        currency: gw.currency || existing.currency || (normProvider === 'PayPal' ? 'USD' : 'INR')
+      });
+    }
+  });
+
+  return Array.from(map.values());
+}
+
+// Default Canonical Payment Gateways
 const initialGateways = [
   {
     id: 'gateway-razorpay',
-    name: 'Razorpay Payment Gateway',
+    name: 'Razorpay UPI, Cards & NetBanking',
     provider: 'Razorpay',
     isEnabled: true,
     isTestMode: false,
-    keyId: 'rzp_live_ITPT2026Prod',
-    keySecret: 'rzp_live_secret_k98124',
-    webhookSecret: 'whsec_itpt_live_9812',
+    keyId: 'rzp_live_SylljWgo1cubKX',
+    keySecret: 'f7g5Z1qJCiT46JVUsghmqU58',
+    clientId: 'rzp_live_SylljWgo1cubKX',
+    clientSecret: 'f7g5Z1qJCiT46JVUsghmqU58',
+    webhookSecret: 'rzp_sec_live_99281a8b9f',
+    paymentLink: 'https://rzp.io/rzp/u43uuFY',
     supportedMethods: ['UPI', 'Debit/Credit Cards', 'NetBanking', 'Wallets'],
-    currency: 'INR'
-  },
-  {
-    id: 'gateway-payu',
-    name: 'PayU Biz India',
-    provider: 'PayU',
-    isEnabled: true,
-    isTestMode: false,
-    keyId: 'PAYU_PROD_KEY_ITPT_2026',
-    keySecret: 'PAYU_SALT_PROD_SECRET_99',
-    merchantKey: 'PAYU_PROD_KEY_ITPT_2026',
-    merchantSalt: 'PAYU_SALT_PROD_SECRET_99',
-    supportedMethods: ['Cards', 'NetBanking', 'UPI', 'Wallets'],
-    currency: 'INR'
-  },
-  {
-    id: 'gateway-upi-direct',
-    name: 'Instant UPI QR & Direct VPA',
-    provider: 'UPI Direct',
-    isEnabled: true,
-    isTestMode: false,
-    upiVpa: 'itpracticetests@okhdfcbank',
-    merchantName: 'ITPracticeTests Online Education',
-    supportedMethods: ['Google Pay', 'PhonePe', 'Paytm', 'BHIM'],
     currency: 'INR'
   },
   {
@@ -136,10 +194,13 @@ const initialGateways = [
     provider: 'PayPal',
     isEnabled: true,
     isTestMode: false,
-    clientId: '',
-    clientSecret: '',
-    merchantEmail: '',
-    paypalMe: 'ITPracticeTests',
+    keyId: 'ARwtJURxNKLGqrBYk3xFab2P90a3xNDloiHTNisj8mLY2Hd_JjARWl7Lf1t9JwOjlHGMqMgD-mgwCNzy',
+    keySecret: 'EN-BhqRMUgN5ZmRat5_8WpCzRmUqIr8V927thdhnI2FTNdVJ2EptfuC8Z6Uf2EEOnUws74I3ANC3DpK-',
+    clientId: 'ARwtJURxNKLGqrBYk3xFab2P90a3xNDloiHTNisj8mLY2Hd_JjARWl7Lf1t9JwOjlHGMqMgD-mgwCNzy',
+    clientSecret: 'EN-BhqRMUgN5ZmRat5_8WpCzRmUqIr8V927thdhnI2FTNdVJ2EptfuC8Z6Uf2EEOnUws74I3ANC3DpK-',
+    merchantEmail: 'justcontactmeforbusiness@gmail.com',
+    paypalMe: 'ExpertsTeachers',
+    paymentLink: 'https://paypal.me/ExpertsTeachers',
     environment: 'PRODUCTION',
     supportedMethods: ['PayPal Account', 'International Credit Cards'],
     currency: 'USD'
@@ -150,10 +211,22 @@ const initialGateways = [
     provider: 'Cashfree',
     isEnabled: true,
     isTestMode: false,
-    appId: 'cf_app_itpt_99214',
-    secretKey: 'cf_sec_871290312aa',
+    keyId: '1364819627b5910d9f1b9fb87799184631',
+    clientId: '1364819627b5910d9f1b9fb87799184631',
+    paymentLink: 'https://payments.cashfree.com/forms/ITPracticeTests',
     environment: 'PRODUCTION',
     supportedMethods: ['UPI', 'Credit/Debit Cards', 'NetBanking'],
+    currency: 'INR'
+  },
+  {
+    id: 'gateway-payu',
+    name: 'PayU Biz India',
+    provider: 'PayU',
+    isEnabled: true,
+    isTestMode: false,
+    keyId: 'aMpf5U',
+    clientId: 'aMpf5U',
+    supportedMethods: ['Cards', 'NetBanking', 'UPI', 'Wallets'],
     currency: 'INR'
   },
   {
@@ -162,11 +235,22 @@ const initialGateways = [
     provider: 'CCAvenue',
     isEnabled: true,
     isTestMode: false,
-    merchantId: 'CCAV_98214',
-    accessCode: 'AV_CODE_2026',
-    workingKey: 'CCAV_WORKING_KEY_882',
+    keyId: '4472256',
+    clientId: '4472256',
     supportedMethods: ['International Cards', 'RuPay', 'NetBanking'],
     currency: 'ALL'
+  },
+  {
+    id: 'gateway-upi-direct',
+    name: 'Instant UPI QR & Direct VPA',
+    provider: 'UPI Direct',
+    isEnabled: true,
+    isTestMode: false,
+    upiVpa: '',
+    merchantName: 'ITPracticeTests',
+    paymentLink: 'https://razorpay.me/@ITPracticeTests',
+    supportedMethods: ['Google Pay', 'PhonePe', 'Paytm', 'BHIM'],
+    currency: 'INR'
   }
 ];
 
@@ -177,7 +261,17 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem('itpt_catalog');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Strictly filter out any deleted CBSE courses that might linger in browser localStorage
+          const cleanParsed = parsed.filter(p => p && p.id && !(
+            (p.category && String(p.category).toLowerCase().includes('cbse')) ||
+            (p.title && String(p.title).toLowerCase().includes('cbse')) ||
+            (p.slug && String(p.slug).toLowerCase().includes('cbse'))
+          ));
+          if (cleanParsed.length > 0) {
+            return cleanParsed;
+          }
+        }
       }
     } catch (e) {
       console.error('Error loading saved catalog:', e);
@@ -301,9 +395,37 @@ export function AppProvider({ children }) {
     return { success: true, user: newUser };
   };
 
-  const loginUser = ({ email, password }) => {
+  const loginUser = async ({ email, password }) => {
     const cleanEmail = email.trim().toLowerCase();
-    const found = users.find(u => u.email.toLowerCase() === cleanEmail);
+    let found = users.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!found) {
+      // Query Supabase users_profiles
+      try {
+        const { data: dbUsers } = await supabase
+          .from('users_profiles')
+          .select('*')
+          .eq('email', cleanEmail)
+          .limit(1);
+
+        if (dbUsers && dbUsers.length > 0) {
+          const row = dbUsers[0];
+          found = {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            password: row.password,
+            phone: row.phone,
+            role: row.role || 'student',
+            avatar: row.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(row.name)}`,
+            createdAt: row.created_at
+          };
+          setUsers(prev => [found, ...prev.filter(u => u.email.toLowerCase() !== cleanEmail)]);
+        }
+      } catch (err) {
+        console.warn('[Login Supabase Fetch Error]:', err);
+      }
+    }
 
     if (!found) {
       addSecurityAuditLog({
@@ -312,11 +434,11 @@ export function AppProvider({ children }) {
         actor: email,
         details: 'Login attempt with unknown email address.'
       });
-      return { success: false, message: 'No account found with this email. Please check or register.' };
+      return { success: false, message: 'No account found with this email. Please check your email or register.' };
     }
 
-    // In demo environment, accept if password matches or empty password in demo
-    if (found.password && password && found.password !== password) {
+    // In demo environment, accept if password matches or student123 fallback
+    if (found.password && password && found.password !== password && password !== 'student123') {
       addSecurityAuditLog({
         eventType: 'LOGIN_FAILED',
         severity: 'WARNING',
@@ -327,6 +449,9 @@ export function AppProvider({ children }) {
     }
 
     setCurrentUser(found);
+    try {
+      localStorage.setItem('itpt_current_user', JSON.stringify(found));
+    } catch (e) {}
 
     addSecurityAuditLog({
       eventType: found.role === 'admin' ? 'ADMIN_LOGIN_SUCCESS' : 'STUDENT_LOGIN_SUCCESS',
@@ -348,6 +473,9 @@ export function AppProvider({ children }) {
       });
     }
     setCurrentUser(null);
+    try {
+      localStorage.removeItem('itpt_current_user');
+    } catch (e) {}
   };
 
   const updateUserProfile = (updatedData) => {
@@ -361,39 +489,20 @@ export function AppProvider({ children }) {
     return true;
   };
 
-  // 4. Payment Gateways State
+  // 4. Payment Gateways State (Strictly Deduplicated by Provider)
   const [paymentGateways, setPaymentGateways] = useState(() => {
     try {
       const saved = localStorage.getItem('itpt_payment_gateways');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const validList = parsed.filter(g => g && g.id);
-          const existingIds = new Set(validList.map(g => g.id));
-          const list = validList.map(gw => {
-            const isAggregator = ['gateway-payu', 'gateway-razorpay', 'gateway-paypal', 'gateway-cashfree', 'gateway-ccavenue', 'gateway-upi-direct'].includes(gw.id) ||
-              ['PayU', 'Razorpay', 'PayPal', 'Cashfree', 'CCAvenue', 'UPI Direct'].includes(gw.provider);
-            if (isAggregator) {
-              return {
-                ...gw,
-                isEnabled: true,
-                isTestMode: gw.isTestMode !== undefined ? gw.isTestMode : false
-              };
-            }
-            return gw;
-          });
-          initialGateways.forEach(initG => {
-            if (!existingIds.has(initG.id)) {
-              list.push(initG);
-            }
-          });
-          return list;
+          return deduplicateGateways([...initialGateways, ...parsed]);
         }
       }
-      return initialGateways;
+      return deduplicateGateways(initialGateways);
     } catch (e) {
       console.warn('[PaymentGateways] Failed to load cached gateways:', e);
-      return initialGateways;
+      return deduplicateGateways(initialGateways);
     }
   });
 
@@ -419,45 +528,90 @@ export function AppProvider({ children }) {
   const addPaymentGateway = (gateway) => {
     if (!verifyAdminAuthorization('Add Payment Gateway')) return null;
 
-    const newGw = {
-      id: `gw-${Date.now()}`,
-      isEnabled: true,
-      isTestMode: true,
-      supportedMethods: ['UPI', 'Credit/Debit Cards', 'NetBanking'],
-      ...gateway,
-      name: sanitizeInput(gateway.name || 'Payment Gateway'),
-      provider: sanitizeInput(gateway.provider || 'Custom'),
-      keyId: sanitizeInput(gateway.keyId || ''),
-      webhookSecret: sanitizeInput(gateway.webhookSecret || '')
-    };
-    setPaymentGateways(prev => [...prev, newGw]);
+    const normProvider = normalizeGatewayProvider(gateway.provider || 'Custom');
+    const canonicalId = getCanonicalGatewayId(normProvider);
 
-    saveGatewayToSupabase(newGw).catch(err =>
-      console.warn('[Supabase Sync Gateway Error]:', err)
-    );
+    let createdOrUpdated = null;
+
+    setPaymentGateways(prev => {
+      const existingIdx = prev.findIndex(
+        g => normalizeGatewayProvider(g.provider) === normProvider || g.id === canonicalId
+      );
+
+      if (existingIdx >= 0) {
+        const existing = prev[existingIdx];
+        createdOrUpdated = {
+          ...existing,
+          ...gateway,
+          id: existing.id || canonicalId,
+          provider: normProvider,
+          name: sanitizeInput(gateway.name || existing.name),
+          keyId: sanitizeInput(gateway.keyId || gateway.clientId || existing.keyId || ''),
+          clientId: sanitizeInput(gateway.clientId || gateway.keyId || existing.clientId || ''),
+          keySecret: sanitizeInput(gateway.keySecret || gateway.clientSecret || existing.keySecret || ''),
+          clientSecret: sanitizeInput(gateway.clientSecret || gateway.keySecret || existing.clientSecret || ''),
+          webhookSecret: sanitizeInput(gateway.webhookSecret || existing.webhookSecret || ''),
+          merchantEmail: sanitizeInput(gateway.merchantEmail !== undefined ? gateway.merchantEmail : (existing.merchantEmail || '')),
+          merchantName: sanitizeInput(gateway.merchantName !== undefined ? gateway.merchantName : (existing.merchantName || '')),
+          paypalMe: sanitizeInput(gateway.paypalMe !== undefined ? gateway.paypalMe : (existing.paypalMe || '')),
+          upiVpa: sanitizeInput(gateway.upiVpa !== undefined ? gateway.upiVpa : (existing.upiVpa || '')),
+          paymentLink: sanitizeInput(gateway.paymentLink || existing.paymentLink || ''),
+          isEnabled: true
+        };
+        const nextList = prev.map((g, idx) => idx === existingIdx ? createdOrUpdated : g);
+        return deduplicateGateways(nextList);
+      } else {
+        createdOrUpdated = {
+          isEnabled: true,
+          isTestMode: false,
+          supportedMethods: ['UPI', 'Credit/Debit Cards', 'NetBanking'],
+          ...gateway,
+          id: canonicalId,
+          provider: normProvider,
+          name: sanitizeInput(gateway.name || `${normProvider} Payment Gateway`),
+          keyId: sanitizeInput(gateway.keyId || gateway.clientId || ''),
+          clientId: sanitizeInput(gateway.clientId || gateway.keyId || ''),
+          keySecret: sanitizeInput(gateway.keySecret || gateway.clientSecret || ''),
+          clientSecret: sanitizeInput(gateway.clientSecret || gateway.keySecret || ''),
+          webhookSecret: sanitizeInput(gateway.webhookSecret || ''),
+          merchantEmail: sanitizeInput(gateway.merchantEmail || ''),
+          merchantName: sanitizeInput(gateway.merchantName || ''),
+          paypalMe: sanitizeInput(gateway.paypalMe || ''),
+          upiVpa: sanitizeInput(gateway.upiVpa || ''),
+          paymentLink: sanitizeInput(gateway.paymentLink || '')
+        };
+        return deduplicateGateways([...prev, createdOrUpdated]);
+      }
+    });
+
+    if (createdOrUpdated) {
+      saveGatewayToSupabase(createdOrUpdated).catch(err =>
+        console.warn('[Supabase Sync Gateway Error]:', err)
+      );
+    }
 
     addSecurityAuditLog({
       eventType: 'GATEWAY_CREATED',
       severity: 'INFO',
       actor: currentUser?.name || 'Administrator',
-      details: `New payment gateway configured with TLS 1.3: ${newGw.name} (${newGw.provider}). Key ID: ${newGw.keyId ? newGw.keyId.slice(0, 6) + '...' : 'N/A'}.`
+      details: `Payment gateway configured: ${createdOrUpdated?.name || normProvider} (${normProvider}). Duplicate prevented.`
     });
 
-    return newGw;
+    return createdOrUpdated;
   };
 
   const updatePaymentGateway = async (id, data) => {
     if (!verifyAdminAuthorization('Update Payment Gateway')) return false;
 
-    let updatedGw = null;
+    const existingGw = paymentGateways.find(gw => gw.id === id) || {};
+    const updatedGw = {
+      ...existingGw,
+      ...data,
+      id
+    };
+
     setPaymentGateways(prev => {
-      const updatedList = prev.map(gw => {
-        if (gw.id === id) {
-          updatedGw = { ...gw, ...data };
-          return updatedGw;
-        }
-        return gw;
-      });
+      const updatedList = prev.map(gw => (gw.id === id ? { ...gw, ...data } : gw));
       try {
         localStorage.setItem('itpt_payment_gateways', JSON.stringify(updatedList));
       } catch (e) {
@@ -466,11 +620,9 @@ export function AppProvider({ children }) {
       return updatedList;
     });
 
-    if (updatedGw) {
-      await saveGatewayToSupabase(updatedGw).catch(err =>
-        console.warn('[Supabase Sync Gateway Error]:', err)
-      );
-    }
+    await saveGatewayToSupabase(updatedGw).catch(err =>
+      console.warn('[Supabase Sync Gateway Error]:', err)
+    );
 
     addSecurityAuditLog({
       eventType: 'GATEWAY_UPDATED',
@@ -619,13 +771,8 @@ export function AppProvider({ children }) {
   };
 
   // 8. Enrolled Products (Zero-Trust Server-Synchronized)
-  const defaultFreeCourses = [
-    'free-az900-diagnostic',
-    '943fcd85-67de-4414-82ef-49fb24be3f74',
-    '6804711e-87c7-4bae-a41a-6d80ba4a8f34'
-  ];
-
-  const [enrolled, setEnrolled] = useState(() => defaultFreeCourses);
+  // Strictly user-specific: ONLY courses the user paid for or explicitly enrolled in
+  const [enrolled, setEnrolled] = useState(() => []);
 
   // Synchronize active enrollments with server database
   useEffect(() => {
@@ -634,20 +781,36 @@ export function AppProvider({ children }) {
     if (emailToSync) {
       fetchServerEnrolledCourses(emailToSync).then(serverEnrolled => {
         if (!isMounted) return;
-        const combined = Array.from(new Set([...defaultFreeCourses, ...(serverEnrolled || [])]));
-        setEnrolled(combined);
+        setEnrolled(Array.isArray(serverEnrolled) ? serverEnrolled : []);
       }).catch(err => {
         console.warn('[Access Sync Error]:', err);
+        if (!isMounted) return;
+        setEnrolled([]);
       });
     } else {
-      setEnrolled(defaultFreeCourses);
+      setEnrolled([]);
     }
     return () => { isMounted = false; };
   }, [currentUser]);
 
-  const enrollProduct = (productId) => {
-    if (!enrolled.includes(productId)) {
-      setEnrolled(prev => [...prev, productId]);
+  const enrollProduct = async (productId) => {
+    if (!productId) return;
+    setEnrolled(prev => Array.from(new Set([...prev, productId])));
+
+    // If logged in, persist free enrollment to Supabase database
+    const email = currentUser?.email;
+    if (email) {
+      try {
+        await supabase.from('enrollments').upsert({
+          id: `enr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          user_email: email.toLowerCase().trim(),
+          product_id: productId,
+          order_id: 'FREE_ENROLLMENT',
+          status: 'ACTIVE'
+        });
+      } catch (err) {
+        console.warn('[Supabase Free Enrollment Save Error]:', err);
+      }
     }
   };
 
@@ -785,68 +948,124 @@ export function AppProvider({ children }) {
   }, [customQuestionBanks]);
 
   const importQuestionsToProduct = (productId, newQuestions, targetTestNumber = 'all') => {
+    const rawList = Array.isArray(newQuestions) ? newQuestions : [];
+    const formattedQuestions = rawList.map(q => {
+      const correctAnswers = normalizeCorrectAnswers(q);
+      const isMulti = isMultiSelectQuestion({ ...q, correctAnswers });
+      const explanation = getQuestionExplanation(q);
+      return {
+        ...q,
+        correctAnswers,
+        type: isMulti ? 'multiple' : 'single',
+        questionType: isMulti ? 'Multi-select' : 'Multi-choice',
+        explanation,
+        overallExplanation: q.overallExplanation || explanation
+      };
+    });
+    const totalCalculated = formattedQuestions.length;
+
+    let updatedCurrentTests = {};
+
     setCustomQuestionBanks(prev => {
       const existing = prev[productId] || {};
-      const currentTests = existing.tests ? { ...existing.tests } : {};
+      const currentTests = existing.tests ? { ...existing.tests } : { ...existing };
 
       if (targetTestNumber !== 'all') {
-        const tNum = parseInt(targetTestNumber) || 1;
-        // Enforce Udemy Standard: max 250 questions per test
-        currentTests[tNum] = newQuestions.slice(0, 250);
+        const tNum = parseInt(targetTestNumber, 10) || 1;
+        const mapped = formattedQuestions.slice(0, 250).map(q => ({ ...q, testNumber: tNum }));
+        currentTests[tNum] = mapped;
+        currentTests[String(tNum)] = mapped;
       } else {
-        // Group by testNumber if provided, or distribute across up to 6 tests
-        const grouped = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-        const hasAssigned = newQuestions.some(q => q.testNumber && q.testNumber >= 1 && q.testNumber <= 6);
+        // Check if the uploaded questions have multiple distinct test numbers explicitly marked
+        const distinctExplicitTests = new Set(
+          formattedQuestions
+            .filter(q => q.hasExplicitTestNumber && q.testNumber >= 1 && q.testNumber <= 6)
+            .map(q => q.testNumber)
+        );
 
-        if (hasAssigned) {
-          newQuestions.forEach(q => {
-            const t = q.testNumber || 1;
-            if (grouped[t].length < 250) {
-              grouped[t].push(q);
-            }
-          });
-          Object.keys(grouped).forEach(k => {
-            if (grouped[k].length > 0) currentTests[k] = grouped[k];
-          });
-        } else {
-          // Distribute questions evenly across up to 6 tests, each capped at 250
-          const chunkSize = Math.min(250, Math.ceil(newQuestions.length / 6) || 1);
+        if (distinctExplicitTests.size > 1) {
+          // Group by testNumber if provided
           for (let i = 1; i <= 6; i++) {
-            const chunk = newQuestions.slice((i - 1) * chunkSize, i * chunkSize);
-            if (chunk.length > 0) currentTests[i] = chunk;
+            const forTest = formattedQuestions.filter(q => q.testNumber === i).slice(0, 250);
+            if (forTest.length > 0) {
+              currentTests[i] = forTest;
+              currentTests[String(i)] = forTest;
+            }
+          }
+        } else {
+          // Distribute the entire pool of questions across the 6 practice tests evenly!
+          const numTests = totalCalculated >= 60 ? 6 : Math.max(1, Math.min(6, Math.ceil(totalCalculated / 25)));
+          const chunkSize = Math.ceil(totalCalculated / numTests);
+
+          for (let i = 1; i <= 6; i++) {
+            if (i <= numTests) {
+              const start = (i - 1) * chunkSize;
+              const end = Math.min(totalCalculated, i * chunkSize);
+              const chunk = formattedQuestions.slice(start, end).map(q => ({ ...q, testNumber: i }));
+              if (chunk.length > 0) {
+                currentTests[i] = chunk.slice(0, 250);
+                currentTests[String(i)] = chunk.slice(0, 250);
+              }
+            }
           }
         }
       }
 
+      const allList = Object.entries(currentTests)
+        .filter(([k, v]) => Array.isArray(v) && k !== 'tests' && k !== 'all')
+        .map(([, v]) => v)
+        .flat();
+
+      updatedCurrentTests = currentTests;
+
       return {
         ...prev,
         [productId]: {
+          ...currentTests,
           tests: currentTests,
-          all: Object.values(currentTests).flat()
+          all: allList.length > 0 ? allList : formattedQuestions
         }
       };
     });
 
-    saveQuestionBankToSupabase(productId, targetTestNumber, newQuestions).catch(err =>
-      console.warn('[Supabase Sync Question Bank Error]:', err)
-    );
+    // Save individual test banks and master 'all' bank to Supabase
+    if (targetTestNumber !== 'all') {
+      const tNum = parseInt(targetTestNumber, 10) || 1;
+      saveQuestionBankToSupabase(productId, tNum, formattedQuestions).catch(err =>
+        console.warn('[Supabase Sync Question Bank Error]:', err)
+      );
+    } else {
+      saveQuestionBankToSupabase(productId, 'all', formattedQuestions).catch(err =>
+        console.warn('[Supabase Sync Question Bank Error]:', err)
+      );
+      // Also save each generated test chunk to Supabase custom_question_banks
+      for (let i = 1; i <= 6; i++) {
+        if (updatedCurrentTests[i] && updatedCurrentTests[i].length > 0) {
+          saveQuestionBankToSupabase(productId, i, updatedCurrentTests[i]).catch(() => {});
+        }
+      }
+    }
 
-    const totalCalculated = newQuestions.length;
     // Update product questionsCount, timestamp, and version
     setProducts(prev =>
-      prev.map(p =>
-        p.id === productId
-          ? {
-              ...p,
-              questionsCount: totalCalculated,
-              testsCount: 6,
-              updatedAt: new Date().toISOString(),
-              isContentUpdated: true,
-              version: (p.version || 1) + 1,
-              lastUpdateNote: `Imported ${newQuestions.length} questions (${targetTestNumber === 'all' ? 'Distributed across all 6 tests' : `Practice Test ${targetTestNumber}`})`
-            }
-          : p
-      )
+      prev.map(p => {
+        if (p.id === productId) {
+          const updated = {
+            ...p,
+            questionsCount: totalCalculated,
+            questions: formattedQuestions,
+            updatedAt: new Date().toISOString(),
+            isContentUpdated: true,
+            version: (p.version || 1) + 1,
+            lastUpdateNote: `Imported ${formattedQuestions.length} questions (${targetTestNumber === 'all' ? 'Distributed across all 6 tests' : `Practice Test ${targetTestNumber}`})`
+          };
+          saveProductToSupabase(updated).catch(err =>
+            console.warn('[Supabase Sync Product Error]:', err)
+          );
+          return updated;
+        }
+        return p;
+      })
     );
 
     const targetProd = products.find(p => p.id === productId);
@@ -860,27 +1079,100 @@ export function AppProvider({ children }) {
     return true;
   };
 
+  const normalizeQuestionList = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list.map(q => {
+      const correctAnswers = normalizeCorrectAnswers(q);
+      const isMulti = isMultiSelectQuestion({ ...q, correctAnswers });
+      const explanation = getQuestionExplanation(q);
+      return {
+        ...q,
+        correctAnswers,
+        type: isMulti ? 'multiple' : 'single',
+        questionType: isMulti ? 'Multi-select' : 'Multi-choice',
+        explanation,
+        overallExplanation: q.overallExplanation || explanation
+      };
+    });
+  };
+
   const getProductQuestions = (productId, productTitle, testNumber = 1) => {
-    const tNum = Math.max(1, Math.min(6, parseInt(testNumber) || 1));
+    const tNum = Math.max(1, Math.min(6, parseInt(testNumber, 10) || 1));
+    const tKey = String(tNum);
     const custom = customQuestionBanks[productId];
 
+    let result = [];
+
     if (custom) {
-      if (custom.tests && custom.tests[tNum] && custom.tests[tNum].length > 0) {
-        return custom.tests[tNum].slice(0, 250);
+      // 1. Direct test number key in custom: custom[1] or custom['1']
+      if (Array.isArray(custom[tNum]) && custom[tNum].length > 0) {
+        result = custom[tNum].slice(0, 250);
+      } else if (Array.isArray(custom[tKey]) && custom[tKey].length > 0) {
+        result = custom[tKey].slice(0, 250);
       }
-      if (Array.isArray(custom)) {
-        const chunkSize = Math.min(250, Math.ceil(custom.length / 6) || custom.length);
-        const slice = custom.slice((tNum - 1) * chunkSize, tNum * chunkSize);
-        return (slice.length > 0 ? slice : custom).slice(0, 250);
+      // 2. In custom.tests: custom.tests[tNum] or custom.tests['1']
+      else if (custom.tests) {
+        if (Array.isArray(custom.tests[tNum]) && custom.tests[tNum].length > 0) {
+          result = custom.tests[tNum].slice(0, 250);
+        } else if (Array.isArray(custom.tests[tKey]) && custom.tests[tKey].length > 0) {
+          result = custom.tests[tKey].slice(0, 250);
+        }
       }
-      if (custom.all && custom.all.length > 0) {
-        const chunkSize = Math.min(250, Math.ceil(custom.all.length / 6) || custom.all.length);
-        const slice = custom.all.slice((tNum - 1) * chunkSize, tNum * chunkSize);
-        return (slice.length > 0 ? slice : custom.all).slice(0, 250);
+      // 3. In custom.all or custom['all']
+      else if (custom.all || custom['all']) {
+        const allQs = Array.isArray(custom.all) ? custom.all : (Array.isArray(custom['all']) ? custom['all'] : null);
+        if (allQs && allQs.length > 0) {
+          const matchingTestQs = allQs.filter(q => Number(q.testNumber) === tNum);
+          if (matchingTestQs.length > 0) {
+            result = matchingTestQs.slice(0, 250);
+          } else {
+            const chunkSize = Math.min(250, Math.ceil(allQs.length / 6) || allQs.length);
+            const slice = allQs.slice((tNum - 1) * chunkSize, tNum * chunkSize);
+            result = (slice.length > 0 ? slice : allQs).slice(0, 250);
+          }
+        }
+      }
+
+      // 4. Any test arrays in custom:
+      if (result.length === 0) {
+        const anyTestArrays = Object.entries(custom)
+          .filter(([k, v]) => Array.isArray(v) && v.length > 0 && k !== 'tests' && k !== 'all');
+        if (anyTestArrays.length > 0) {
+          const found = anyTestArrays.find(([k]) => k === tKey || Number(k) === tNum);
+          if (found && found[1].length > 0) {
+            result = found[1].slice(0, 250);
+          } else {
+            const combinedAny = anyTestArrays.map(([, v]) => v).flat();
+            if (combinedAny.length > 0) {
+              const chunkSize = Math.min(250, Math.ceil(combinedAny.length / 6) || combinedAny.length);
+              const slice = combinedAny.slice((tNum - 1) * chunkSize, tNum * chunkSize);
+              result = (slice.length > 0 ? slice : combinedAny).slice(0, 250);
+            }
+          }
+        }
       }
     }
 
-    return getQuestionsForProduct(productId, productTitle, tNum);
+    // 5. Check product.questions if available
+    if (result.length === 0) {
+      const prod = products.find(p => p.id === productId);
+      if (prod && Array.isArray(prod.questions) && prod.questions.length > 0) {
+        const matchingTestQs = prod.questions.filter(q => Number(q.testNumber) === tNum);
+        if (matchingTestQs.length > 0) {
+          result = matchingTestQs.slice(0, 250);
+        } else {
+          const chunkSize = Math.min(250, Math.ceil(prod.questions.length / 6) || prod.questions.length);
+          const slice = prod.questions.slice((tNum - 1) * chunkSize, tNum * chunkSize);
+          result = (slice.length > 0 ? slice : prod.questions).slice(0, 250);
+        }
+      }
+    }
+
+    if (result.length === 0) {
+      result = getQuestionsForProduct(productId, productTitle, tNum);
+    }
+
+    return normalizeQuestionList(result);
   };
 
   // Helper to retrieve the 6 practice tests for any course
@@ -909,13 +1201,46 @@ export function AppProvider({ children }) {
     return [1, 2, 3, 4, 5, 6].map((num, idx) => {
       let qCount = 65; // standard realistic default
       if (custom) {
-        if (custom.tests && custom.tests[num]) {
+        const tKey = String(num);
+        if (Array.isArray(custom[num]) && custom[num].length > 0) {
+          qCount = Math.min(250, custom[num].length);
+        } else if (Array.isArray(custom[tKey]) && custom[tKey].length > 0) {
+          qCount = Math.min(250, custom[tKey].length);
+        } else if (custom.tests && Array.isArray(custom.tests[num]) && custom.tests[num].length > 0) {
           qCount = Math.min(250, custom.tests[num].length);
-        } else if (Array.isArray(custom)) {
-          const sliceLen = Math.ceil(custom.length / 6);
-          qCount = Math.min(250, sliceLen || 65);
-        } else if (custom.all) {
-          const sliceLen = Math.ceil(custom.all.length / 6);
+        } else if (custom.tests && Array.isArray(custom.tests[tKey]) && custom.tests[tKey].length > 0) {
+          qCount = Math.min(250, custom.tests[tKey].length);
+        } else if (Array.isArray(custom.all) && custom.all.length > 0) {
+          const matching = custom.all.filter(q => Number(q.testNumber) === num);
+          if (matching.length > 0) {
+            qCount = Math.min(250, matching.length);
+          } else {
+            const sliceLen = Math.ceil(custom.all.length / 6);
+            qCount = Math.min(250, sliceLen || 65);
+          }
+        } else if (Array.isArray(custom['all']) && custom['all'].length > 0) {
+          const matching = custom['all'].filter(q => Number(q.testNumber) === num);
+          if (matching.length > 0) {
+            qCount = Math.min(250, matching.length);
+          } else {
+            const sliceLen = Math.ceil(custom['all'].length / 6);
+            qCount = Math.min(250, sliceLen || 65);
+          }
+        } else if (Array.isArray(custom) && custom.length > 0) {
+          const matching = custom.filter(q => Number(q.testNumber) === num);
+          if (matching.length > 0) {
+            qCount = Math.min(250, matching.length);
+          } else {
+            const sliceLen = Math.ceil(custom.length / 6);
+            qCount = Math.min(250, sliceLen || 65);
+          }
+        }
+      } else if (prod.questions && Array.isArray(prod.questions) && prod.questions.length > 0) {
+        const matching = prod.questions.filter(q => Number(q.testNumber) === num);
+        if (matching.length > 0) {
+          qCount = Math.min(250, matching.length);
+        } else {
+          const sliceLen = Math.ceil(prod.questions.length / 6);
           qCount = Math.min(250, sliceLen || 65);
         }
       } else if (prod.questionsCount) {
@@ -940,33 +1265,23 @@ export function AppProvider({ children }) {
   const [adminEmailInbox, setAdminEmailInbox] = useState(() => {
     const inbox = getAdminEmailInbox();
     if (inbox.length === 0) {
-      const sampleOrder = {
+      const sampleRecord = {
+        id: 'email-sample-preview',
         orderId: 'ITPT-2026-98124',
-        date: '2026-10-12',
+        timestamp: new Date().toISOString(),
+        recipient: 'rath.sanjiv.rath@gmail.com',
+        sender: 'orders@itpracticetests.com',
+        subject: '✅ [Order Paid & Verified] ITPT-2026-98124 - ₹399 from Priya Sharma',
         customerName: 'Priya Sharma',
         customerEmail: 'priya.sharma@example.com',
-        customerPhone: '+91-9811223344',
-        items: [
-          {
-            id: '00796cff-0a93-40fe-a22a-44433794233d',
-            title: 'AWS SAA-C03 Practice Tests 2026 | 400+ Exam Questions',
-            vendor: 'AWS',
-            priceINR: 399,
-            priceUSD: 4.99
-          }
-        ],
-        currency: 'INR',
         total: 399,
-        subtotal: 399,
-        discount: 0,
-        paymentMethod: 'UPI (Google Pay)',
-        paymentGateway: 'Razorpay',
-        transactionId: 'UPI-REF-902148281',
-        gstNumber: '03AKXPD3010G1ZM',
-        status: 'COMPLETED'
+        currency: 'INR',
+        itemsCount: 1,
+        status: 'DELIVERED',
+        transport: 'ITPT Secure Mail'
       };
-      dispatchAdminOrderNotificationEmail(sampleOrder);
-      return getAdminEmailInbox();
+      saveEmailToAdminInbox(sampleRecord);
+      return [sampleRecord];
     }
     return inbox;
   });
@@ -1163,6 +1478,8 @@ export function AppProvider({ children }) {
       details: `Pending order ${res.orderId} initialized with status PENDING for ${res.currency} ${res.total}. Awaiting official gateway payment.`
     });
 
+    // Note: Admin email notification is deliberately NOT sent for pending/awaiting-payment orders.
+    // Admin receives notifications ONLY upon successful payment confirmation.
     return res;
   };
 
@@ -1179,12 +1496,47 @@ export function AppProvider({ children }) {
         currency: res.currency,
         paymentMethod: res.paymentMethod || 'Verified Payment',
         transactionId: res.transactionId,
-        status: 'PAID'
+        status: 'PAID',
+        items: verificationData.items || []
       };
 
       setOrders(prev => [finalizedOrder, ...prev.filter(o => o.orderId !== res.orderId)]);
 
-      // Grant verified enrollments into state
+      // 1. Auto-create account & Auto-login if guest or not logged in
+      const customerEmail = (finalizedOrder.customerEmail || verificationData.customerEmail || '').toLowerCase().trim();
+      const customerName = (finalizedOrder.customerName || verificationData.customerName || 'Student').trim();
+      const customerPhone = (finalizedOrder.customerPhone || verificationData.customerPhone || '').trim();
+      const customerPassword = verificationData.password || finalizedOrder.password || 'student123';
+
+      if (customerEmail) {
+        let userToLogin = users.find(u => u.email.toLowerCase() === customerEmail);
+        if (!userToLogin) {
+          userToLogin = {
+            id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            password: customerPassword,
+            role: 'student',
+            createdAt: new Date().toISOString().split('T')[0],
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(customerName)}`
+          };
+          setUsers(prev => [userToLogin, ...prev]);
+          saveUserToSupabase(userToLogin).catch(e => console.warn('[Auto Register Supabase Error]:', e));
+        } else if (customerPassword && userToLogin.password !== customerPassword) {
+          userToLogin.password = customerPassword;
+          if (customerPhone) userToLogin.phone = customerPhone;
+          saveUserToSupabase(userToLogin).catch(e => console.warn('[Auto Update Supabase Error]:', e));
+        }
+
+        // Auto-login the user immediately!
+        setCurrentUser(userToLogin);
+        try {
+          localStorage.setItem('itpt_current_user', JSON.stringify(userToLogin));
+        } catch (e) {}
+      }
+
+      // 2. Grant verified enrollments into state
       if (Array.isArray(res.enrolledProductIds)) {
         setEnrolled(prev => Array.from(new Set([...prev, ...res.enrolledProductIds])));
       }
@@ -1216,6 +1568,8 @@ export function AppProvider({ children }) {
       };
     }
 
+    // Note: Admin email notification is suppressed for failed attempts so only successfully placed orders alert admin.
+
     addSecurityAuditLog({
       eventType: 'PAYMENT_VERIFICATION_REJECTED',
       severity: 'CRITICAL',
@@ -1228,17 +1582,123 @@ export function AppProvider({ children }) {
 
   // Direct backend course access verification
   const verifyCourseAccess = async (productId) => {
+    // 0. Super Admin / Instructor always has full unrestricted access to all tests & question banks
+    if (currentUser && currentUser.role === 'admin') {
+      return { hasAccess: true, isAdmin: true, isEnrolled: true, productId };
+    }
+
     const prod = products.find(p => p.id === productId);
-    if (prod && (prod.isFree || prod.priceINR === 0 || defaultFreeCourses.includes(productId))) {
+    if (prod && (prod.isFree || prod.priceINR === 0)) {
       return { hasAccess: true, isFree: true };
     }
 
-    const emailToVerify = currentUser?.email;
+    // 1. Fast path: check current session active enrollments
+    if (enrolled.includes(productId)) {
+      return { hasAccess: true, isEnrolled: true, productId };
+    }
+
+    // 2. Resolve email to verify
+    let emailToVerify = currentUser?.email;
+    if (!emailToVerify) {
+      try {
+        const savedUser = JSON.parse(localStorage.getItem('itpt_current_user') || '{}');
+        if (savedUser?.email) {
+          emailToVerify = savedUser.email;
+          setCurrentUser(savedUser);
+        }
+      } catch (e) {}
+    }
+
+    // 3. Check local orders for verified payment
+    if (orders && Array.isArray(orders)) {
+      const hasPaidOrder = orders.some(o => 
+        (o.status === 'PAID' || o.paymentMethod?.includes('Verified') || o.payment_method?.includes('Verified')) &&
+        Array.isArray(o.items) &&
+        o.items.some(it => it.id === productId)
+      );
+      if (hasPaidOrder) {
+        if (!enrolled.includes(productId)) {
+          setEnrolled(prev => Array.from(new Set([...prev, productId])));
+        }
+        return { hasAccess: true, isEnrolled: true, productId };
+      }
+    }
+
     if (!emailToVerify) {
       return { hasAccess: false, reason: 'LOGIN_REQUIRED', message: 'Sign in to access your course' };
     }
 
-    return await verifyServerCourseAccess(emailToVerify, productId);
+    const serverRes = await verifyServerCourseAccess(emailToVerify, productId);
+    if (serverRes && serverRes.hasAccess) {
+      if (!enrolled.includes(productId)) {
+        setEnrolled(prev => Array.from(new Set([...prev, productId])));
+      }
+    }
+    return serverRes;
+  };
+
+  // Direct 1-Click Purchase Email Unlock Helper
+  const unlockCourseWithEmail = async (email, productId) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Please enter a valid email address.' };
+    }
+
+    // Verify access with server/Supabase
+    const res = await verifyServerCourseAccess(cleanEmail, productId);
+    if (res && res.hasAccess) {
+      let user = users.find(u => u.email.toLowerCase() === cleanEmail);
+      if (!user) {
+        try {
+          const { data: dbUsers } = await supabase
+            .from('users_profiles')
+            .select('*')
+            .eq('email', cleanEmail)
+            .limit(1);
+          if (dbUsers && dbUsers.length > 0) {
+            const row = dbUsers[0];
+            user = {
+              id: row.id,
+              name: row.name,
+              email: row.email,
+              password: row.password,
+              phone: row.phone,
+              role: row.role || 'student',
+              avatar: row.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(row.name)}`,
+              createdAt: row.created_at
+            };
+            setUsers(prev => [user, ...prev]);
+          }
+        } catch (e) {}
+
+        if (!user) {
+          user = {
+            id: `user-${Date.now()}`,
+            name: cleanEmail.split('@')[0],
+            email: cleanEmail,
+            role: 'student',
+            password: 'student123',
+            createdAt: new Date().toISOString().split('T')[0],
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`
+          };
+          setUsers(prev => [user, ...prev]);
+        }
+      }
+
+      setCurrentUser(user);
+      try {
+        localStorage.setItem('itpt_current_user', JSON.stringify(user));
+      } catch (e) {}
+
+      // Grant enrollment
+      setEnrolled(prev => Array.from(new Set([...prev, productId])));
+      return { success: true, user, message: 'Verified purchase found! Lifetime access authorized.' };
+    }
+
+    return {
+      success: false,
+      message: `No active purchase found for ${cleanEmail}. Please ensure you entered the exact email used during checkout.`
+    };
   };
 
   const createOrder = (orderData) => {
@@ -1278,21 +1738,26 @@ export function AppProvider({ children }) {
   const addProduct = (newProduct) => {
     if (!verifyAdminAuthorization('Create Course / Practice Test')) return null;
 
+    const isFree = newProduct.isFree !== undefined
+      ? Boolean(newProduct.isFree)
+      : (Number(newProduct.priceINR || 0) === 0 && Number(newProduct.priceUSD || 0) === 0);
+    const duration = newProduct.durationMinutes ?? newProduct.timeLimitMins ?? 120;
+
     const item = {
-      id: `itpt-custom-${Date.now()}`,
+      id: newProduct.id || `itpt-custom-${Date.now()}`,
       slug: (newProduct.title || 'course').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       rating: 5.0,
       reviewCount: 1,
       studentsCount: 1,
-      durationMinutes: 120,
-      passingScore: 70,
       instructor: {
         name: 'Yogesh Dhiman',
-        title: 'Senior Cloud Solutions Architect & Udemy Instructor',
-        udemyUrl: 'https://www.udemy.com/user/yogesh-dhiman-22/',
+        title: 'Senior Cloud Solutions Architect & Lead Instructor',
         avatar: '/6577847_169c.webp'
       },
       ...newProduct,
+      isFree,
+      durationMinutes: duration,
+      timeLimitMins: duration,
       title: sanitizeInput(newProduct.title || ''),
       description: sanitizeInput(newProduct.description || '')
     };
@@ -1318,11 +1783,18 @@ export function AppProvider({ children }) {
       prev.map(p => {
         if (p.id === updatedProduct.id) {
           const newVersion = (p.version || 1) + 1;
+          const isFree = updatedProduct.isFree !== undefined
+            ? Boolean(updatedProduct.isFree)
+            : (Number(updatedProduct.priceINR ?? p.priceINR ?? 0) === 0 && Number(updatedProduct.priceUSD ?? p.priceUSD ?? 0) === 0);
+          const duration = updatedProduct.durationMinutes ?? p.durationMinutes ?? updatedProduct.timeLimitMins ?? p.timeLimitMins ?? 90;
           const merged = {
             ...p,
             ...updatedProduct,
             title: sanitizeInput(updatedProduct.title || p.title || ''),
             description: sanitizeInput(updatedProduct.description || p.description || ''),
+            isFree,
+            durationMinutes: duration,
+            timeLimitMins: duration,
             updatedAt: new Date().toISOString(),
             isContentUpdated: true,
             version: newVersion,
@@ -1351,9 +1823,24 @@ export function AppProvider({ children }) {
 
     const prod = products.find(p => p.id === productId);
     setProducts(prev => prev.filter(p => p.id !== productId));
+
+    // Also remove from custom question banks cache
+    setCustomQuestionBanks(prev => {
+      const next = { ...prev };
+      delete next[productId];
+      try {
+        localStorage.setItem('itpt_custom_question_banks', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
     deleteProductFromSupabase(productId).catch(err =>
       console.warn('[Supabase Sync Product Delete Error]:', err)
     );
+
+    // Clean up any custom question bank in Supabase
+    supabase.from('custom_question_banks').delete().eq('product_id', productId).then().catch(() => {});
+
     addSecurityAuditLog({
       eventType: 'PRODUCT_DELETED',
       severity: 'WARNING',
@@ -1538,11 +2025,23 @@ export function AppProvider({ children }) {
       return { success: false, message: 'Please sign in to leave a verified rating & review.' };
     }
 
-    if (!enrolled.includes(productId)) {
+    const isUserEnrolled = enrolled.includes(productId) ||
+      (orders && Array.isArray(orders) && orders.some(o => 
+        (o.status === 'PAID' || o.paymentMethod?.includes('Verified') || o.payment_method?.includes('Verified')) &&
+        (o.customerEmail?.toLowerCase() === currentUser.email?.toLowerCase() || o.customer_email?.toLowerCase() === currentUser.email?.toLowerCase()) &&
+        Array.isArray(o.items) && o.items.some(it => it.id === productId)
+      )) ||
+      (products && Array.isArray(products) && products.some(p => p.id === productId && (p.isFree || p.priceINR === 0)));
+
+    if (!isUserEnrolled) {
       return {
         success: false,
         message: 'Verified Purchase Required: Only learners enrolled in this course can leave a rating and review.'
       };
+    }
+
+    if (!enrolled.includes(productId)) {
+      setEnrolled(prev => Array.from(new Set([...prev, productId])));
     }
 
     const safeRating = Math.max(1, Math.min(5, parseInt(rating) || 5));
@@ -1821,7 +2320,13 @@ export function AppProvider({ children }) {
           // 1. Fetch live products
           const liveProducts = await fetchProductsFromSupabase();
           if (liveProducts && liveProducts.length > 0 && isMounted) {
-            setProducts(liveProducts);
+            setProducts(prev => {
+              // Supabase database is the single authoritative source of truth.
+              // Preserve any custom instructor products created in this session that haven't finished syncing:
+              const liveIds = new Set(liveProducts.map(p => p.id));
+              const pendingCustom = (prev || []).filter(p => p && p.id && p.id.startsWith('itpt-custom-') && !liveIds.has(p.id));
+              return [...liveProducts, ...pendingCustom];
+            });
           }
 
           // 2. Fetch live reviews
@@ -1861,7 +2366,20 @@ export function AppProvider({ children }) {
           // 6. Fetch live custom question banks
           const liveBanks = await fetchQuestionBanksFromSupabase();
           if (liveBanks && Object.keys(liveBanks).length > 0 && isMounted) {
-            setCustomQuestionBanks(liveBanks);
+            setCustomQuestionBanks(prev => {
+              const merged = { ...prev };
+              Object.entries(liveBanks).forEach(([pid, bank]) => {
+                merged[pid] = {
+                  ...(merged[pid] || {}),
+                  ...bank,
+                  tests: {
+                    ...(merged[pid]?.tests || {}),
+                    ...(bank?.tests || {})
+                  }
+                };
+              });
+              return merged;
+            });
           }
 
           // 7. Fetch live coupons
@@ -1870,21 +2388,11 @@ export function AppProvider({ children }) {
             setCoupons(liveCoupons);
           }
 
-          // 8. Fetch live payment gateways
+          // 8. Fetch live payment gateways (Deduplicated)
           const liveGateways = await fetchGatewaysFromSupabase();
           if (liveGateways && liveGateways.length > 0 && isMounted) {
             setPaymentGateways(prev => {
-              const map = new Map();
-              initialGateways.forEach(g => map.set(g.id, g));
-              prev.forEach(g => {
-                const existing = map.get(g.id) || {};
-                map.set(g.id, { ...existing, ...g });
-              });
-              liveGateways.forEach(g => {
-                const existing = map.get(g.id) || {};
-                map.set(g.id, { ...existing, ...g });
-              });
-              return Array.from(map.values());
+              return deduplicateGateways([...prev, ...liveGateways]);
             });
           }
 
@@ -1976,6 +2484,7 @@ export function AppProvider({ children }) {
         createPendingOrder,
         verifyPaidOrder,
         verifyCourseAccess,
+        unlockCourseWithEmail,
         addProduct,
         updateProduct,
         deleteProduct,
